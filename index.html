@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear Map Visualizer</title>
+<meta name="description" content="See what a matrix does to the plane: figures, lattices, and circles under a linear transformation.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2324589f'/%3E%3Crect x='5' y='17' width='10' height='10' fill='none' stroke='%23faf9f6' stroke-width='2'/%3E%3Cpath d='M15 15 L27 5 L27 15 L15 25 Z' fill='none' stroke='%23faf9f6' stroke-width='2'/%3E%3C/svg%3E">
+<script>(function(){try{var t=localStorage.getItem('hwg-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+<style>
+/* Theme copied from hwGenie's "slate" theme (shared with the Row Reducer). */
+:root {
+  --bg: #faf9f6;
+  --fg: #20242a;
+  --muted: #5d646f;
+  --accent: #24589f;
+  --alert: #b3223a;
+  --border: #dcdad0;
+  --card-bg: #efeee8;
+  --sol-bg: #e6efe6;
+  --sol-accent: #2c6a3f;
+  --code-bg: #f1f0ea;
+  --hover-bg: #e2e8f3;
+  --uvec: #d97706;
+  --vvec: #7c3aed;
+  --font-body: Charter, "Bitstream Charter", Georgia, "Times New Roman", serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171c;
+    --fg: #e7e5e0;
+    --muted: #9aa1ad;
+    --accent: #8db1ea;
+    --alert: #e87a90;
+    --border: #33363e;
+    --card-bg: #1f222a;
+    --sol-bg: #1c2721;
+    --sol-accent: #98cda5;
+    --code-bg: #22252d;
+    --hover-bg: #2b3242;
+    --uvec: #fbbf24;
+    --vvec: #b197fb;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171c;
+  --fg: #e7e5e0;
+  --muted: #9aa1ad;
+  --accent: #8db1ea;
+  --alert: #e87a90;
+  --border: #33363e;
+  --card-bg: #1f222a;
+  --sol-bg: #1c2721;
+  --sol-accent: #98cda5;
+  --code-bg: #22252d;
+  --hover-bg: #2b3242;
+  --uvec: #fbbf24;
+  --vvec: #b197fb;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+@media (prefers-reduced-motion: no-preference) {
+  body { transition: background-color .2s ease, color .2s ease; }
+}
+main { max-width: 62rem; margin: 0 auto; padding: 1.25rem 1.1rem 4rem; }
+a { color: var(--accent); }
+
+#themetoggle {
+  position: fixed;
+  top: .5rem;
+  right: .7rem;
+  z-index: 60;
+  background: var(--card-bg);
+  color: var(--fg);
+  border: none;
+  padding: .3rem .6rem;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+#themetoggle:hover { background: var(--code-bg); }
+
+#courselink {
+  position: fixed;
+  top: .5rem;
+  left: .7rem;
+  z-index: 60;
+  background: var(--card-bg);
+  color: var(--accent);
+  text-decoration: none;
+  padding: .3rem .6rem;
+  font-family: var(--font-ui);
+  font-size: .85rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+#courselink:hover { background: var(--accent); color: var(--bg); }
+
+header.doc { text-align: center; margin: 1rem 0 1.5rem; }
+header.doc h1 { font-size: 1.6rem; margin: 0; font-weight: 700; }
+p.tagline { color: var(--muted); font-size: .95rem; margin: .4rem 0 0; }
+
+.panel { background: var(--card-bg); padding: 1.15rem 1.35rem; margin: 1.1rem 0; }
+.card-title {
+  font-family: var(--font-ui);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 .8rem;
+}
+p.hint, .hint { font-family: var(--font-ui); font-size: .85rem; color: var(--muted); margin: .2rem 0 .9rem; }
+.msg { color: var(--alert); font-family: var(--font-ui); font-size: .8rem; min-height: 1.2em; margin: .5rem 0 0; }
+
+button.filebox {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--bg);
+  border: none;
+  padding: .3rem .7rem;
+  font-family: var(--font-ui);
+  font-size: .85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--accent);
+  cursor: pointer;
+}
+button.filebox:hover { background: var(--accent); color: var(--bg); }
+button.filebox:disabled { color: var(--muted); cursor: default; }
+button.filebox:disabled:hover { background: var(--bg); }
+.btnrow { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; align-items: center; }
+
+select {
+  font-family: var(--font-mono);
+  font-size: .95rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: .3rem .3rem;
+}
+select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+label.fld {
+  font-family: var(--font-ui);
+  font-size: .85rem;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+}
+label.fld input[type="checkbox"] { accent-color: var(--accent); margin: 0; width: .95rem; height: .95rem; }
+label.fld.chk { cursor: pointer; color: var(--fg); }
+.setuprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin: .2rem 0 .6rem; }
+.setuprow .hint { margin: 0; }
+
+/* --- matrix panel: entry on the left, example maps on the right --- */
+.matcols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
+@media (max-width: 46rem) { .matcols { grid-template-columns: 1fr; } }
+.matwrap {
+  display: flex;
+  justify-content: safe center;
+  align-items: stretch;
+  overflow-x: auto;
+  padding: .6rem 0 .8rem;
+}
+.bracket { flex: 0 0 .5rem; border: 2px solid var(--fg); }
+.bracket.bl { border-right: none; margin-right: .25rem; }
+.bracket.br { border-left: none; margin-left: .25rem; }
+#grid { display: grid; row-gap: .35rem; column-gap: .5rem; align-content: center; padding: .45rem 0; }
+input.cell {
+  font-family: var(--font-mono);
+  font-size: .95rem;
+  text-align: center;
+  width: 100%;
+  min-width: 3.2rem;
+  padding: .38rem .2rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+input.cell:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input.cell.bad { outline: 2px solid var(--alert); outline-offset: -1px; }
+.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .6rem 0 .4rem; }
+#presetNote { min-height: 1.4em; margin: .8rem 0 0; }
+#presetNote .katex { font-size: 1em; }
+
+/* --- the two planes --- */
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin: 1.1rem 0; }
+@media (max-width: 46rem) { .views { grid-template-columns: 1fr; } }
+.view { background: var(--card-bg); padding: .9rem 1rem 1rem; }
+.viewhead { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .55rem; }
+.viewhead .card-title { margin: 0; }
+.zoom { display: inline-flex; gap: .3rem; }
+.zoom button.filebox { padding: .15rem .55rem; font-size: .9rem; line-height: 1.2; }
+svg.plane {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  background: var(--bg);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+svg.plane.dragging { cursor: grabbing; }
+.plane .grid { stroke: var(--border); stroke-width: 1; }
+.plane .axis { stroke: var(--muted); stroke-width: 1.2; }
+.plane .ticklabel { fill: var(--muted); font-family: var(--font-ui); font-size: 9px; }
+.plane text { stroke: none; }
+.plane .fig { fill: var(--accent); fill-opacity: .22; stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; }
+.plane .figdetail { fill: var(--accent); stroke: none; }
+.plane .figline { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; }
+.plane .circ { fill: none; stroke: var(--alert); stroke-width: 1.8; }
+.plane .lat { stroke-opacity: .45; stroke-width: 1; }
+.plane .lat.lu { stroke: var(--uvec); }
+.plane .lat.lv { stroke: var(--vvec); }
+.plane .latpt { fill: var(--fg); fill-opacity: .8; }
+.plane .usq { fill: var(--fg); fill-opacity: .08; stroke: none; }
+.plane .uvec { stroke: var(--uvec); fill: var(--uvec); }
+.plane .vvec { stroke: var(--vvec); fill: var(--vvec); }
+.plane .basis { stroke: var(--fg); fill: var(--fg); }
+.plane .shaft { fill: none; stroke-width: 2; stroke-linecap: round; }
+.plane .basis.shaft { stroke-width: 1.6; }
+.plane .head { stroke: none; }
+.plane .tip { cursor: grab; stroke: var(--bg); stroke-width: 1.5; }
+.plane .lbl { font-family: var(--font-body); font-style: italic; font-size: 14px; }
+.plane .note { fill: var(--muted); font-family: var(--font-ui); font-size: 13px; }
+
+/* --- options --- */
+.optrow { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; align-items: center; }
+.swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; vertical-align: -1px; }
+.swatch.u { background: var(--uvec); }
+.swatch.v { background: var(--vvec); }
+#latticeTools { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; margin-top: .7rem; }
+#latticeTools .hint { margin: 0; }
+#latticeTools[hidden] { display: none; }
+#uvRead { font-size: 1rem; }
+
+footer.doc {
+  margin-top: 3.5rem;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: .78rem;
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+<a id="courselink" href="https://tghyde.github.io/math221-fall2026/" title="Back to the Math 221 course site">&larr; Math 221</a>
+<button id="themetoggle" aria-label="Toggle light or dark theme" title="Toggle light/dark"></button>
+<main>
+  <header class="doc">
+    <h1>Linear Map Visualizer</h1>
+    <p class="tagline">See what a matrix does to the plane.</p>
+  </header>
+
+  <!-- ============ matrix ============ -->
+  <section class="panel" id="matpanel">
+    <p class="card-title">Matrix</p>
+    <div class="setuprow">
+      <label class="fld">m <select id="selM" aria-label="Number of rows m"><option>2</option><option>3</option></select></label>
+      <span>&times;</span>
+      <label class="fld">n <select id="selN" aria-label="Number of columns n"><option>2</option><option>3</option></select></label>
+      <span class="hint" id="dimNote"></span>
+    </div>
+    <div class="matcols">
+      <div class="matentry">
+        <div id="editBox">
+          <p class="hint">Entries can be integers (<code>-3</code>), fractions (<code>1/2</code>), decimals (<code>0.25</code>), or expressions like <code>sqrt(3)/2</code>. Press Enter when you’re done.</p>
+          <div class="matwrap">
+            <div class="bracket bl" aria-hidden="true"></div>
+            <div id="grid"></div>
+            <div class="bracket br" aria-hidden="true"></div>
+          </div>
+          <div class="btnrow">
+            <button class="filebox" id="mapBtn">Map &rarr;</button>
+            <button class="filebox" id="clearBtn">Clear</button>
+          </div>
+        </div>
+        <div id="mapBox" hidden>
+          <div id="matTex" class="texmat"></div>
+          <div class="btnrow">
+            <button class="filebox" id="editBtn">&larr; Edit matrix</button>
+            <button class="filebox" id="copyLink">Copy link</button>
+          </div>
+        </div>
+        <p class="msg" id="editMsg"></p>
+      </div>
+      <div class="presets">
+        <p class="card-title">Examples</p>
+        <p class="hint" style="margin-top:0">Each button fills in a fresh example of that kind of map.</p>
+        <div class="btnrow" style="margin-top:.4rem">
+          <button class="filebox" data-preset="rotation">Rotation</button>
+          <button class="filebox" data-preset="dilation">Dilation</button>
+          <button class="filebox" data-preset="reflection">Reflection</button>
+          <button class="filebox" data-preset="shear">Shear</button>
+          <button class="filebox" data-preset="projection">Projection</button>
+          <button class="filebox" data-preset="random">Random</button>
+        </div>
+        <div id="presetNote" class="hint" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ options ============ -->
+  <section class="panel" id="options">
+    <p class="card-title">Show</p>
+    <div class="optrow">
+      <label class="fld chk"><input type="checkbox" id="chkFigure" checked> Figure</label>
+      <label class="fld chk"><input type="checkbox" id="chkCircle"> Unit circle</label>
+      <label class="fld chk"><input type="checkbox" id="chkLattice"> Lattice <span class="swatch u" aria-hidden="true"></span><span class="swatch v" aria-hidden="true"></span></label>
+      <label class="fld chk"><input type="checkbox" id="chkBasis"> Standard basis</label>
+      <label class="fld chk"><input type="checkbox" id="chkGrid" checked> Grid</label>
+    </div>
+    <div id="latticeTools" hidden>
+      <span id="uvRead"></span>
+      <button class="filebox" id="resetUV">Reset <i>u</i>, <i>v</i></button>
+      <span class="hint">Drag the tips of <i>u</i> and <i>v</i> in the domain (hold Shift for free movement).</span>
+    </div>
+  </section>
+
+  <!-- ============ the two planes ============ -->
+  <section class="views">
+    <div class="view">
+      <div class="viewhead">
+        <p class="card-title" id="domTitle">Domain</p>
+        <span class="zoom"><button class="filebox" data-view="d" data-dir="1" title="Zoom out" aria-label="Zoom out domain">&minus;</button><button class="filebox" data-view="d" data-dir="-1" title="Zoom in" aria-label="Zoom in domain">+</button></span>
+      </div>
+      <svg id="svgDom" class="plane" viewBox="0 0 400 400" role="img" aria-label="Domain"></svg>
+    </div>
+    <div class="view">
+      <div class="viewhead">
+        <p class="card-title" id="codTitle">Codomain</p>
+        <span class="zoom"><button class="filebox" data-view="c" data-dir="1" title="Zoom out" aria-label="Zoom out codomain">&minus;</button><button class="filebox" data-view="c" data-dir="-1" title="Zoom in" aria-label="Zoom in codomain">+</button></span>
+      </div>
+      <svg id="svgCod" class="plane" viewBox="0 0 400 400" role="img" aria-label="Codomain"></svg>
+    </div>
+  </section>
+
+  <footer class="doc">
+    <a href="https://github.com/tghyde/linearmaps">Linear Map Visualizer</a>
+  </footer>
+</main>
+
+<script>
+"use strict";
+(function () {
+var $ = function (id) { return document.getElementById(id); };
+var SVGNS = "http://www.w3.org/2000/svg";
+var VB = 400;                    /* viewBox is VB x VB pixels */
+var ZOOMS = [2, 3, 4, 5, 6, 8, 10, 15, 20];
+
+/* ===================== entry expressions =====================
+ * Entries are tiny arithmetic expressions: numbers, fractions, decimals,
+ * pi, sqrt(...), + - * / and parentheses, with juxtaposition meaning
+ * multiplication (2pi, 3sqrt(2)).  Each parses to an AST that gives both
+ * a floating-point value (for the pictures) and LaTeX (for the display),
+ * so a rotation matrix shows \frac{\sqrt{3}}{2} rather than 0.866.
+ */
+function tokenize(s) {
+  var toks = [], i = 0, j;
+  while (i < s.length) {
+    var ch = s[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    if (/[0-9.]/.test(ch)) {
+      j = i; while (j < s.length && /[0-9.]/.test(s[j])) j++;
+      var t = s.slice(i, j);
+      if (!/^(\d+\.?\d*|\.\d+)$/.test(t)) return null;
+      toks.push({ t: "num", v: t }); i = j; continue;
+    }
+    if (/[a-zA-Z]/.test(ch)) {
+      j = i; while (j < s.length && /[a-zA-Z]/.test(s[j])) j++;
+      toks.push({ t: "id", v: s.slice(i, j).toLowerCase() }); i = j; continue;
+    }
+    if ("+-*/()".indexOf(ch) >= 0) { toks.push({ t: ch }); i++; continue; }
+    if (ch === "√") { toks.push({ t: "id", v: "sqrt" }); i++; continue; }
+    if (ch === "π") { toks.push({ t: "id", v: "pi" }); i++; continue; }
+    if (ch === "−") { toks.push({ t: "-" }); i++; continue; }
+    if (ch === "×" || ch === "·") { toks.push({ t: "*" }); i++; continue; }
+    return null;
+  }
+  return toks;
+}
+function parseExpr(s) {
+  if (typeof s !== "string") return null;
+  var toks = tokenize(s);
+  if (!toks || !toks.length) return null;
+  var p = 0;
+  function peek() { return toks[p]; }
+  function expr() {
+    var a = term(); if (!a) return null;
+    while (peek() && (peek().t === "+" || peek().t === "-")) {
+      var op = toks[p++].t, b = term(); if (!b) return null;
+      a = { k: op === "+" ? "add" : "sub", a: a, b: b };
+    }
+    return a;
+  }
+  function term() {
+    var a = unary(); if (!a) return null;
+    for (;;) {
+      var nx = peek(), b;
+      if (nx && (nx.t === "*" || nx.t === "/")) {
+        p++; b = unary(); if (!b) return null;
+        a = { k: nx.t === "*" ? "mul" : "div", a: a, b: b };
+      } else if (nx && (nx.t === "id" || nx.t === "(")) {
+        b = primary(); if (!b) return null;
+        a = { k: "mul", a: a, b: b, implicit: true };
+      } else break;
+    }
+    return a;
+  }
+  function unary() {
+    var nx = peek();
+    if (nx && nx.t === "-") { p++; var a = unary(); return a ? { k: "neg", a: a } : null; }
+    if (nx && nx.t === "+") { p++; return unary(); }
+    return primary();
+  }
+  function paren() {
+    if (!peek() || peek().t !== "(") return null;
+    p++;
+    var e = expr();
+    if (!e || !peek() || peek().t !== ")") return null;
+    p++;
+    return e;
+  }
+  function primary() {
+    var nx = peek(); if (!nx) return null;
+    if (nx.t === "num") { p++; return { k: "num", v: nx.v }; }
+    if (nx.t === "(") { var e = paren(); return e ? { k: "par", a: e } : null; }
+    if (nx.t === "id") {
+      p++;
+      if (nx.v === "pi") return { k: "pi" };
+      if (nx.v === "sqrt") {
+        var nn = peek();
+        if (nn && nn.t === "(") { var e2 = paren(); return e2 ? { k: "sqrt", a: e2 } : null; }
+        if (nn && nn.t === "num") { p++; return { k: "sqrt", a: { k: "num", v: nn.v } }; }
+        return null;
+      }
+      return null;
+    }
+    return null;
+  }
+  var ast = expr();
+  if (!ast || p !== toks.length) return null;
+  return ast;
+}
+function evalAst(n) {
+  switch (n.k) {
+    case "num": return parseFloat(n.v);
+    case "pi": return Math.PI;
+    case "par": return evalAst(n.a);
+    case "neg": return -evalAst(n.a);
+    case "sqrt": var x = evalAst(n.a); return x < 0 ? NaN : Math.sqrt(x);
+    case "add": return evalAst(n.a) + evalAst(n.b);
+    case "sub": return evalAst(n.a) - evalAst(n.b);
+    case "mul": return evalAst(n.a) * evalAst(n.b);
+    case "div": var d = evalAst(n.b); return d === 0 ? NaN : evalAst(n.a) / d;
+  }
+  return NaN;
+}
+function normNum(v) {
+  if (v[0] === ".") v = "0" + v;
+  if (v[v.length - 1] === ".") v = v.slice(0, -1);
+  return v;
+}
+function isSum(n) { return n.k === "add" || n.k === "sub"; }
+function wrap(t) { return "\\left(" + t + "\\right)"; }
+function texAst(n) {
+  var A, B;
+  switch (n.k) {
+    case "num": return normNum(n.v);
+    case "pi": return "\\pi";
+    case "par": return wrap(texAst(n.a));
+    case "neg": return "-" + (isSum(n.a) ? wrap(texAst(n.a)) : texAst(n.a));
+    case "sqrt": return "\\sqrt{" + texAst(n.a) + "}";
+    case "add":
+      if (n.b.k === "neg") return texAst(n.a) + "-" + (isSum(n.b.a) ? wrap(texAst(n.b.a)) : texAst(n.b.a));
+      return texAst(n.a) + "+" + texAst(n.b);
+    case "sub":
+      return texAst(n.a) + "-" + ((isSum(n.b) || n.b.k === "neg") ? wrap(texAst(n.b)) : texAst(n.b));
+    case "mul":
+      A = isSum(n.a) ? wrap(texAst(n.a)) : texAst(n.a);
+      B = (isSum(n.b) || n.b.k === "neg") ? wrap(texAst(n.b)) : texAst(n.b);
+      var juxta = (n.b.k === "pi" || n.b.k === "sqrt" || n.b.k === "par") && n.a.k !== "div";
+      return A + (juxta ? "" : "\\cdot ") + B;
+    case "div":
+      if (n.a.k === "neg") return "-\\frac{" + texAst(n.a.a) + "}{" + texAst(n.b) + "}";
+      return "\\frac{" + texAst(n.a) + "}{" + texAst(n.b) + "}";
+  }
+  return "?";
+}
+/* -> {val, tex} or null when the entry cannot be read */
+function parseEntry(s) {
+  var ast = parseExpr(s);
+  if (!ast) return null;
+  var v = evalAst(ast);
+  if (!isFinite(v)) return null;
+  return { val: v, tex: texAst(ast) };
+}
+
+/* ===================== state ===================== */
+var state = {
+  m: 2, n: 2,
+  entries: [["0", "0"], ["0", "0"]],  /* strings shown in the grid */
+  A: null,       /* numeric m x n matrix once mapped */
+  Atex: null,    /* matching LaTeX entries */
+  u: [1, 0], v: [0, 1],
+  show: { figure: true, circle: false, lattice: false, basis: false, grid: true },
+  Wd: 5, Wc: 5   /* half-widths of the domain and codomain windows */
+};
+var is2x2 = function () { return state.m === 2 && state.n === 2; };
+
+/* ===================== KaTeX ===================== */
+function kt(el, tex, display) {
+  if (window.katex) {
+    katex.render(tex, el, { displayMode: !!display, throwOnError: false });
+  } else {
+    el.textContent = tex;
+  }
+}
+function matrixTex(T) {
+  var cols = T[0].length, spec = "";
+  for (var j = 0; j < cols; j++) spec += "r";
+  return "\\left[\\begin{array}{" + spec + "}" +
+    T.map(function (r) { return r.join(" & "); }).join(" \\\\ ") +
+    "\\end{array}\\right]";
+}
+function fmt(x) {
+  var s = (Math.round(x * 100) / 100).toString();
+  return s === "-0" ? "0" : s;
+}
+
+/* ===================== entry grid ===================== */
+function buildGrid() {
+  var grid = $("grid");
+  grid.innerHTML = "";
+  var tmpl = [];
+  for (var j = 0; j < state.n; j++) tmpl.push("minmax(3.2rem, 4.5rem)");
+  grid.style.gridTemplateColumns = tmpl.join(" ");
+  for (var r = 0; r < state.m; r++) {
+    for (j = 0; j < state.n; j++) {
+      var inp = document.createElement("input");
+      inp.className = "cell";
+      inp.value = state.entries[r][j];
+      inp.dataset.r = r;
+      inp.dataset.c = j;
+      inp.autocomplete = "off";
+      inp.spellcheck = false;
+      inp.setAttribute("aria-label", "Row " + (r + 1) + ", column " + (j + 1));
+      inp.addEventListener("focus", function () {
+        /* the default 0 clears on focus so typing can start immediately;
+         * blur restores it if nothing was entered */
+        if (this.value.trim() === "0") { this.value = ""; }
+        else { this.select(); }
+      });
+      inp.addEventListener("blur", function () {
+        if (this.value.trim() === "") this.value = "0";
+        state.entries[Number(this.dataset.r)][Number(this.dataset.c)] = this.value;
+      });
+      inp.addEventListener("input", function () {
+        this.classList.remove("bad");
+        $("editMsg").textContent = "";
+        $("presetNote").textContent = "";
+        state.entries[Number(this.dataset.r)][Number(this.dataset.c)] = this.value;
+      });
+      inp.addEventListener("keydown", cellKeydown);
+      grid.appendChild(inp);
+    }
+  }
+}
+/* Enter finishes entry and maps; arrows (and Tab) move between cells. */
+function cellKeydown(ev) {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    if (this.value.trim() === "") this.value = "0";
+    state.entries[Number(this.dataset.r)][Number(this.dataset.c)] = this.value;
+    $("mapBtn").click();
+    return;
+  }
+  var r = Number(this.dataset.r), c = Number(this.dataset.c), go = null;
+  if (ev.key === "ArrowDown") go = [r + 1, c];
+  else if (ev.key === "ArrowUp") go = [r - 1, c];
+  else if (ev.key === "ArrowLeft" && this.selectionStart === 0 && this.selectionEnd === 0) go = [r, c - 1];
+  else if (ev.key === "ArrowRight" && this.selectionStart === this.value.length &&
+           this.selectionEnd === this.value.length) go = [r, c + 1];
+  if (!go) return;
+  var target = document.querySelector('input.cell[data-r="' + go[0] + '"][data-c="' + go[1] + '"]');
+  if (target) { ev.preventDefault(); target.focus(); }
+}
+function readGrid() {
+  var A = [], T = [], ok = true, firstBad = null;
+  for (var r = 0; r < state.m; r++) {
+    var row = [], trow = [];
+    for (var j = 0; j < state.n; j++) {
+      var inp = document.querySelector('input.cell[data-r="' + r + '"][data-c="' + j + '"]');
+      var s = inp ? inp.value : state.entries[r][j];
+      if (s.trim() === "") s = "0";
+      state.entries[r][j] = s;
+      var e = parseEntry(s);
+      if (!e) {
+        ok = false;
+        if (inp) { inp.classList.add("bad"); if (!firstBad) firstBad = inp; }
+        row.push(0); trow.push("?");
+      } else { row.push(e.val); trow.push(e.tex); }
+    }
+    A.push(row); T.push(trow);
+  }
+  if (!ok && firstBad) firstBad.focus();
+  return { ok: ok, A: A, T: T };
+}
+function setEntries(E) {
+  state.entries = E.map(function (r) { return r.slice(); });
+  buildGrid();
+}
+function zeroEntries(m, n) {
+  var E = [];
+  for (var r = 0; r < m; r++) { var row = []; for (var j = 0; j < n; j++) row.push("0"); E.push(row); }
+  return E;
+}
+function resizeEntries(m, n) {
+  var E = zeroEntries(m, n);
+  for (var r = 0; r < Math.min(m, state.entries.length); r++)
+    for (var j = 0; j < Math.min(n, state.entries[r].length); j++) E[r][j] = state.entries[r][j];
+  state.entries = E;
+}
+
+/* ===================== map / edit modes ===================== */
+function doMap() {
+  var g = readGrid();
+  if (!g.ok) { $("editMsg").textContent = "Each entry must be a number or an expression like sqrt(2)/2."; return false; }
+  $("editMsg").textContent = "";
+  state.A = g.A; state.Atex = g.T;
+  kt($("matTex"), "A = " + matrixTex(g.T), true);
+  $("editBox").hidden = true;
+  $("mapBox").hidden = false;
+  drawAll();
+  updateHash();
+  return true;
+}
+function doEdit() {
+  $("mapBox").hidden = true;
+  $("editBox").hidden = false;
+  buildGrid();
+  var first = document.querySelector("input.cell");
+  if (first) first.focus();
+  updateHash();
+}
+function setDims(m, n) {
+  state.m = m; state.n = n;
+  $("selM").value = String(m); $("selN").value = String(n);
+  resizeEntries(m, n);
+  state.A = null; state.Atex = null;
+  $("presetNote").textContent = "";
+  $("mapBox").hidden = true;
+  $("editBox").hidden = false;
+  buildGrid();
+  var sup = { 2: "²", 3: "³" };
+  $("dimNote").innerHTML = "<i>T</i>(<i>x</i>) = <i>Ax</i> maps ℝ" + sup[n] + " → ℝ" + sup[m];
+  $("domTitle").textContent = "Domain ℝ" + sup[n];
+  $("codTitle").textContent = "Codomain ℝ" + sup[m];
+  document.querySelectorAll("[data-preset]").forEach(function (b) { b.disabled = !is2x2(); });
+  drawAll();
+}
+
+/* ===================== example maps ===================== */
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a; }
+function fracStr(n, d) {
+  if (d < 0) { n = -n; d = -d; }
+  var g = gcd(n, d) || 1; n /= g; d /= g;
+  return d === 1 ? String(n) : n + "/" + d;
+}
+function negStr(s) { return s === "0" ? "0" : (s[0] === "-" ? s.slice(1) : "-" + s); }
+/* "the x-axis", "the y-axis", "the line y = \tfrac{1}{2}x" for the line through (a, b) */
+function lineTex(a, b) {
+  if (b === 0) return "\\text{the } x\\text{-axis}";
+  if (a === 0) return "\\text{the } y\\text{-axis}";
+  var g = gcd(a, b); a /= g; b /= g;
+  if (a < 0) { a = -a; b = -b; }
+  var coef;
+  if (a === 1) coef = (b === 1 ? "" : b === -1 ? "-" : String(b));
+  else coef = (b < 0 ? "-" : "") + "\\tfrac{" + Math.abs(b) + "}{" + a + "}";
+  return "\\text{the line } y = " + coef + "x";
+}
+var ROT = { 30: ["sqrt(3)/2", "1/2"], 45: ["sqrt(2)/2", "sqrt(2)/2"], 60: ["1/2", "sqrt(3)/2"], 90: ["0", "1"],
+            120: ["-1/2", "sqrt(3)/2"], 135: ["-sqrt(2)/2", "sqrt(2)/2"], 150: ["-sqrt(3)/2", "1/2"], 180: ["-1", "0"] };
+var LINES = [[1, 0], [0, 1], [1, 1], [1, -1], [2, 1], [1, 2], [3, 1], [1, 3], [-1, 2]];
+var lastPreset = {};
+function freshPick(kind, list, key) {
+  /* avoid handing back the same example twice in a row */
+  var k, tries = 0;
+  do { k = pick(list); tries++; } while (key(k) === lastPreset[kind] && tries < 8);
+  lastPreset[kind] = key(k);
+  return k;
+}
+function preset(kind) {
+  var E, note;
+  if (kind === "rotation") {
+    var sign = pick([1, 1, -1]);
+    var deg = freshPick("rotation", Object.keys(ROT).map(Number), function (d) { return d; });
+    var cs = ROT[deg], c = cs[0], s = cs[1];
+    if (sign < 0) s = negStr(s);
+    E = [[c, negStr(s)], [s, c]];
+    note = "\\text{Rotation by } " + deg + "^\\circ \\text{ " + (sign < 0 ? "clockwise" : "counterclockwise") + "}";
+  } else if (kind === "dilation") {
+    var k = freshPick("dilation", ["2", "3", "1/2", "3/2", "-1", "-2", "1/3"], String);
+    E = [[k, "0"], ["0", k]];
+    var kp = parseEntry(k);
+    note = "\\text{Dilation by a factor of } " + kp.tex;
+  } else if (kind === "reflection") {
+    var L = freshPick("reflection", LINES, String), a = L[0], b = L[1], q = a * a + b * b;
+    E = [[fracStr(a * a - b * b, q), fracStr(2 * a * b, q)], [fracStr(2 * a * b, q), fracStr(b * b - a * a, q)]];
+    note = "\\text{Reflection across } " + lineTex(a, b);
+  } else if (kind === "shear") {
+    var h = pick([true, false]);
+    var sk = freshPick("shear", ["1", "2", "-1", "1/2", "-2", "3/2"], String);
+    E = h ? [["1", sk], ["0", "1"]] : [["1", "0"], [sk, "1"]];
+    note = "\\text{" + (h ? "Horizontal" : "Vertical") + " shear by } " + parseEntry(sk).tex;
+  } else if (kind === "projection") {
+    var P = freshPick("projection", LINES, String), pa = P[0], pb = P[1], pq = pa * pa + pb * pb;
+    E = [[fracStr(pa * pa, pq), fracStr(pa * pb, pq)], [fracStr(pa * pb, pq), fracStr(pb * pb, pq)]];
+    note = "\\text{Projection onto } " + lineTex(pa, pb);
+  } else {
+    do {
+      E = [[0, 0], [0, 0]].map(function (r) { return r.map(function () { return String(Math.floor(Math.random() * 7) - 3); }); });
+    } while (E.every(function (r) { return r.every(function (x) { return x === "0"; }); }));
+    note = "\\text{A random matrix with small integer entries}";
+  }
+  setEntries(E);
+  doMap();
+  kt($("presetNote"), note);
+}
+
+/* ===================== geometry helpers ===================== */
+function apply(M, p) { return [M[0][0] * p[0] + M[0][1] * p[1], M[1][0] * p[0] + M[1][1] * p[1]]; }
+function makeP(W) {
+  var s = VB / (2 * W), c = VB / 2;
+  return {
+    W: W, s: s, c: c,
+    px: function (x, y) { return [c + x * s, c - y * s]; },
+    math: function (px, py) { return [(px - c) / s, (c - py) / s]; }
+  };
+}
+function inBox(p, W) { return Math.abs(p[0]) <= W + 1e-9 && Math.abs(p[1]) <= W + 1e-9; }
+/* Liang–Barsky clip of the line p + t d to the square [-W, W]^2 */
+function clipLine(p, d, W) {
+  var t0 = -Infinity, t1 = Infinity;
+  for (var i = 0; i < 2; i++) {
+    if (Math.abs(d[i]) < 1e-12) { if (Math.abs(p[i]) > W) return null; continue; }
+    var a = (-W - p[i]) / d[i], b = (W - p[i]) / d[i];
+    t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
+  }
+  if (!(t0 < t1)) return null;
+  return [p[0] + t0 * d[0], p[1] + t0 * d[1], p[0] + t1 * d[0], p[1] + t1 * d[1]];
+}
+/* Lines and points of the lattice {a u + b v : a, b integers} inside the window. */
+function latticeGeom(u, v, W) {
+  var out = { lines: [], points: [], tooFine: false };   /* lines: [x1,y1,x2,y2,"lu"|"lv"] */
+  var eps = 1e-9, lu = Math.hypot(u[0], u[1]), lv = Math.hypot(v[0], v[1]);
+  var det = u[0] * v[1] - u[1] * v[0];
+  if (Math.abs(det) < 1e-7) {
+    /* degenerate: everything lies on one line (or is just the origin) */
+    var dir = lu >= eps ? u : (lv >= eps ? v : null);
+    if (dir) { var seg = clipLine([0, 0], dir, W); if (seg) { seg.push(lu >= eps ? "lu" : "lv"); out.lines.push(seg); } }
+    [u, v].forEach(function (w) {
+      var l = Math.hypot(w[0], w[1]); if (l < eps) return;
+      var kmax = Math.floor(W * Math.SQRT2 / l);
+      if (kmax > 400) { out.tooFine = true; return; }
+      for (var k = -kmax; k <= kmax; k++) { var p = [k * w[0], k * w[1]]; if (inBox(p, W)) out.points.push(p); }
+    });
+    return out;
+  }
+  var amin = Infinity, amax = -Infinity, bmin = Infinity, bmax = -Infinity;
+  [[-W, -W], [W, -W], [W, W], [-W, W]].forEach(function (c) {
+    var a = (v[1] * c[0] - v[0] * c[1]) / det, b = (-u[1] * c[0] + u[0] * c[1]) / det;
+    amin = Math.min(amin, a); amax = Math.max(amax, a);
+    bmin = Math.min(bmin, b); bmax = Math.max(bmax, b);
+  });
+  if (amax - amin > 300 || bmax - bmin > 300) { out.tooFine = true; return out; }
+  var a, b, seg2;
+  for (a = Math.ceil(amin); a <= Math.floor(amax); a++) { seg2 = clipLine([a * u[0], a * u[1]], v, W); if (seg2) { seg2.push("lv"); out.lines.push(seg2); } }
+  for (b = Math.ceil(bmin); b <= Math.floor(bmax); b++) { seg2 = clipLine([b * v[0], b * v[1]], u, W); if (seg2) { seg2.push("lu"); out.lines.push(seg2); } }
+  var count = 0;
+  for (a = Math.ceil(amin); a <= Math.floor(amax); a++)
+    for (b = Math.ceil(bmin); b <= Math.floor(bmax); b++) {
+      var p = [a * u[0] + b * v[0], a * u[1] + b * v[1]];
+      if (inBox(p, W)) { out.points.push(p); if (++count > 20000) return out; }
+    }
+  return out;
+}
+
+/* ===================== drawing ===================== */
+function el(name, attrs, parent) {
+  var e = document.createElementNS(SVGNS, name);
+  for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function gridStep(W) { return W <= 6 ? 1 : W <= 12 ? 2 : W <= 30 ? 5 : 10; }
+function drawGrid(svg, P) {
+  var W = P.W, step = gridStep(W), k, a, b;
+  if (state.show.grid) {
+    for (k = -Math.floor(W / step) * step; k <= W; k += step) {
+      if (k === 0) continue;
+      a = P.px(k, -W); b = P.px(k, W);
+      el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
+      a = P.px(-W, k); b = P.px(W, k);
+      el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
+    }
+  }
+  a = P.px(0, -W); b = P.px(0, W);
+  el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "axis" }, svg);
+  a = P.px(-W, 0); b = P.px(W, 0);
+  el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "axis" }, svg);
+  if (state.show.grid) {
+    var lstep = step * (W / step > 8 ? 2 : 1);
+    for (k = -Math.floor(W / lstep) * lstep; k <= W; k += lstep) {
+      if (k === 0) continue;
+      var q = P.px(k, 0);
+      el("text", { x: q[0], y: q[1] + 11, "text-anchor": "middle", "class": "ticklabel" }, svg).textContent = k;
+      q = P.px(0, k);
+      el("text", { x: q[0] - 4, y: q[1] + 3, "text-anchor": "end", "class": "ticklabel" }, svg).textContent = k;
+    }
+  }
+}
+function transformAttr(P, M) {
+  /* math (x, y) -> pixel: X = c + s(ax + by), Y = c - s(cx + dy) */
+  return "matrix(" + [P.s * M[0][0], -P.s * M[1][0], P.s * M[0][1], -P.s * M[1][1], P.c, P.c].join(" ") + ")";
+}
+/* The default figure, drawn in math coordinates (y up).  Replace FIGURE with
+ * any SVG markup; keep vector-effect="non-scaling-stroke" so outlines stay
+ * crisp after the transformation. */
+var FIGURE =
+  '<path class="fig" vector-effect="non-scaling-stroke" d="M1.9 2.2 C2.05 2.55 2.35 2.75 2.75 2.7 L2.65 2.2 Z"/>' +
+  '<path class="fig" vector-effect="non-scaling-stroke" d="M3.5 1.5 C3.5 2.05 2.95 2.3 2.3 2.28 C1.8 2.26 1.45 2 1.15 1.62 ' +
+  'L0.3 2.25 L0.3 0.75 L1.15 1.38 C1.45 1 1.8 0.74 2.3 0.72 C2.95 0.7 3.5 0.95 3.5 1.5 Z"/>' +
+  '<circle class="figdetail" cx="3.0" cy="1.72" r="0.11"/>' +
+  '<path class="figline" vector-effect="non-scaling-stroke" d="M3.2 1.25 Q3.35 1.12 3.48 1.3"/>';
+function clampPt(p) { return [Math.min(VB - 6, Math.max(6, p[0])), Math.min(VB - 4, Math.max(10, p[1]))]; }
+function labelEl(svg, pos, cls, main, sub) {
+  var t = el("text", { x: pos[0], y: pos[1], "text-anchor": "middle", "class": "lbl " + cls }, svg);
+  t.appendChild(document.createTextNode(main));
+  if (sub) {
+    var ts = el("tspan", { dy: "4", "font-size": "10", "font-style": "normal" }, t);
+    ts.textContent = sub;
+  }
+  return t;
+}
+/* arrow from the origin to (x, y); label offset to the "side" (+1 left of travel, -1 right) */
+function arrow(svg, P, x, y, cls, label, sub, side) {
+  var o = P.px(0, 0), t = P.px(x, y);
+  var dx = t[0] - o[0], dy = t[1] - o[1], L = Math.hypot(dx, dy);
+  if (L < 1) {
+    el("circle", { cx: o[0], cy: o[1], r: 3.5, "class": cls + " head" }, svg);
+    if (label) labelEl(svg, clampPt([o[0] + 12 * side, o[1] - 10]), cls, label, sub);
+    return;
+  }
+  var ux = dx / L, uy = dy / L, h = Math.min(11, L * .6);
+  var bx = t[0] - ux * h, by = t[1] - uy * h;
+  el("line", { x1: o[0], y1: o[1], x2: bx, y2: by, "class": cls + " shaft" }, svg);
+  el("polygon", { points: t[0] + "," + t[1] + " " + (bx - uy * h * .42) + "," + (by + ux * h * .42) + " " + (bx + uy * h * .42) + "," + (by - ux * h * .42), "class": cls + " head" }, svg);
+  if (label) {
+    var pos = clampPt([t[0] + ux * 11 + uy * 10 * side, t[1] + uy * 11 - ux * 10 * side + 5]);
+    labelEl(svg, pos, cls, label, sub);
+  }
+}
+function note(svg, text) {
+  el("text", { x: VB / 2, y: VB / 2 - 10, "text-anchor": "middle", "class": "note" }, svg).textContent = text;
+}
+function drawView(isDom) {
+  var svg = isDom ? $("svgDom") : $("svgCod");
+  var P = makeP(isDom ? state.Wd : state.Wc);
+  svg.innerHTML = "";
+  drawGrid(svg, P);
+  if (!is2x2()) { note(svg, "Three-dimensional pictures are coming soon."); return; }
+  if (!isDom && !state.A) { note(svg, "Enter a matrix and press Map."); return; }
+  var M = isDom ? [[1, 0], [0, 1]] : state.A;
+  var pre = isDom ? "" : "A";
+  var e1 = apply(M, [1, 0]), e2 = apply(M, [0, 1]);
+  var uu = apply(M, state.u), vv = apply(M, state.v);
+  var i, p, q;
+
+  if (state.show.basis) {
+    var c3 = [e1[0] + e2[0], e1[1] + e2[1]];
+    el("polygon", { points: [P.px(0, 0), P.px(e1[0], e1[1]), P.px(c3[0], c3[1]), P.px(e2[0], e2[1])].map(function (z) { return z.join(","); }).join(" "), "class": "usq" }, svg);
+  }
+  if (state.show.figure) {
+    var g = el("g", { transform: transformAttr(P, M) }, svg);
+    g.innerHTML = FIGURE;
+  }
+  if (state.show.circle) {
+    var gc = el("g", { transform: transformAttr(P, M) }, svg);
+    el("circle", { cx: 0, cy: 0, r: 1, "class": "circ", "vector-effect": "non-scaling-stroke" }, gc);
+  }
+  if (state.show.lattice) {
+    var L = latticeGeom(uu, vv, P.W);
+    for (i = 0; i < L.lines.length; i++) {
+      p = P.px(L.lines[i][0], L.lines[i][1]); q = P.px(L.lines[i][2], L.lines[i][3]);
+      el("line", { x1: p[0], y1: p[1], x2: q[0], y2: q[1], "class": "lat " + L.lines[i][4] }, svg);
+    }
+    for (i = 0; i < L.points.length; i++) {
+      p = P.px(L.points[i][0], L.points[i][1]);
+      el("circle", { cx: p[0], cy: p[1], r: 2.3, "class": "latpt" }, svg);
+    }
+    if (L.tooFine) el("text", { x: VB - 8, y: VB - 8, "text-anchor": "end", "class": "note" }, svg).textContent = "lattice too fine to draw";
+  }
+  if (state.show.basis) {
+    arrow(svg, P, e1[0], e1[1], "basis", pre + "e", "1", -1);
+    arrow(svg, P, e2[0], e2[1], "basis", pre + "e", "2", -1);
+  }
+  if (state.show.lattice) {
+    arrow(svg, P, uu[0], uu[1], "uvec", pre + "u", null, 1);
+    arrow(svg, P, vv[0], vv[1], "vvec", pre + "v", null, 1);
+    if (isDom) {
+      p = P.px(uu[0], uu[1]); el("circle", { cx: p[0], cy: p[1], r: 5.5, "class": "uvec tip" }, svg);
+      q = P.px(vv[0], vv[1]); el("circle", { cx: q[0], cy: q[1], r: 5.5, "class": "vvec tip" }, svg);
+    }
+  }
+}
+function drawAll() {
+  drawView(true);
+  drawView(false);
+  $("latticeTools").hidden = !state.show.lattice;
+  kt($("uvRead"), "u = (" + fmt(state.u[0]) + ",\\, " + fmt(state.u[1]) + "),\\quad v = (" + fmt(state.v[0]) + ",\\, " + fmt(state.v[1]) + ")");
+}
+
+/* ===================== dragging u and v ===================== */
+var drag = null;
+function clientToVB(svg, ev) {
+  var r = svg.getBoundingClientRect();
+  return [(ev.clientX - r.left) * VB / r.width, (ev.clientY - r.top) * VB / r.height];
+}
+function setupDrag() {
+  var svg = $("svgDom");
+  svg.addEventListener("pointerdown", function (ev) {
+    if (!state.show.lattice || !is2x2()) return;
+    var P = makeP(state.Wd), pt = clientToVB(svg, ev), best = null, bd = 18;
+    ["u", "v"].forEach(function (k) {
+      var t = P.px(state[k][0], state[k][1]), d = Math.hypot(t[0] - pt[0], t[1] - pt[1]);
+      if (d < bd) { bd = d; best = k; }
+    });
+    if (!best) return;
+    drag = best;
+    svg.setPointerCapture(ev.pointerId);
+    svg.classList.add("dragging");
+    ev.preventDefault();
+  });
+  svg.addEventListener("pointermove", function (ev) {
+    if (!drag) return;
+    var P = makeP(state.Wd), pt = clientToVB(svg, ev), m = P.math(pt[0], pt[1]);
+    var snap = ev.shiftKey ? 100 : 2;
+    var x = Math.round(m[0] * snap) / snap, y = Math.round(m[1] * snap) / snap;
+    x = Math.max(-P.W, Math.min(P.W, x)); y = Math.max(-P.W, Math.min(P.W, y));
+    if (x === state[drag][0] && y === state[drag][1]) return;
+    state[drag] = [x, y];
+    drawAll();
+  });
+  function end(ev) {
+    if (!drag) return;
+    drag = null;
+    svg.classList.remove("dragging");
+    try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
+    updateHash();
+  }
+  svg.addEventListener("pointerup", end);
+  svg.addEventListener("pointercancel", end);
+}
+
+/* ===================== share link (URL hash) ===================== */
+function b64url(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function unb64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return decodeURIComponent(escape(atob(s))); }
+var lastHash = "";
+function updateHash() {
+  var sh = state.show;
+  var o = { v: 1, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0, uv: [state.u, state.v],
+            s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid].map(Number), w: [state.Wd, state.Wc] };
+  lastHash = "#" + b64url(JSON.stringify(o));
+  try { history.replaceState(null, "", lastHash); } catch (e) {}
+}
+function loadHash() {
+  var h = window.location.hash;
+  if (!h || h.length < 2) return false;
+  try {
+    var o = JSON.parse(unb64url(h.slice(1)));
+    if (o.v !== 1) return false;
+    var m = Number(o.m), n = Number(o.n);
+    if (!(m === 2 || m === 3) || !(n === 2 || n === 3)) return false;
+    state.m = m; state.n = n;
+    state.entries = zeroEntries(m, n);
+    if (Array.isArray(o.e)) for (var r = 0; r < m; r++) for (var j = 0; j < n; j++)
+      if (o.e[r] && typeof o.e[r][j] === "string") state.entries[r][j] = o.e[r][j];
+    if (o.uv && o.uv.length === 2) {
+      ["u", "v"].forEach(function (k, i) {
+        var w = o.uv[i];
+        if (Array.isArray(w) && w.length === 2 && isFinite(w[0]) && isFinite(w[1])) state[k] = [Number(w[0]), Number(w[1])];
+      });
+    }
+    if (Array.isArray(o.s) && o.s.length === 5) {
+      ["figure", "circle", "lattice", "basis", "grid"].forEach(function (k, i) { state.show[k] = !!o.s[i]; });
+    }
+    if (Array.isArray(o.w)) {
+      if (ZOOMS.indexOf(Number(o.w[0])) >= 0) state.Wd = Number(o.w[0]);
+      if (ZOOMS.indexOf(Number(o.w[1])) >= 0) state.Wc = Number(o.w[1]);
+    }
+    return { mapped: o.p === 1 };
+  } catch (e) { return false; }
+}
+
+/* ===================== wiring ===================== */
+function init() {
+  /* theme toggle (matches hwGenie course pages; shares the hwg-theme key) */
+  var tbtn = $("themetoggle");
+  function effective() {
+    var a = document.documentElement.getAttribute("data-theme");
+    if (a) return a;
+    return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  function icon() { tbtn.textContent = effective() === "dark" ? "☀" : "☾"; }
+  tbtn.addEventListener("click", function () {
+    var next = effective() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("hwg-theme", next); } catch (e) {}
+    icon();
+  });
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", icon);
+  icon();
+
+  /* dimensions */
+  function dimChange() { setDims(Number($("selM").value), Number($("selN").value)); updateHash(); }
+  $("selM").addEventListener("change", dimChange);
+  $("selN").addEventListener("change", dimChange);
+
+  /* matrix buttons */
+  $("mapBtn").addEventListener("click", doMap);
+  $("editBtn").addEventListener("click", doEdit);
+  $("clearBtn").addEventListener("click", function () {
+    setEntries(zeroEntries(state.m, state.n));
+    $("presetNote").textContent = "";
+    $("editMsg").textContent = "";
+    var first = document.querySelector("input.cell");
+    if (first) first.focus();
+    updateHash();
+  });
+  $("copyLink").addEventListener("click", function () {
+    updateHash();
+    var url = window.location.href, msg = $("editMsg");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { msg.textContent = "Link copied."; },
+                                              function () { msg.textContent = "Copy the link from the address bar."; });
+    } else msg.textContent = "Copy the link from the address bar.";
+    setTimeout(function () { if (msg.textContent.indexOf("Link") === 0) msg.textContent = ""; }, 2500);
+  });
+  document.querySelectorAll("[data-preset]").forEach(function (b) {
+    b.addEventListener("click", function () { preset(this.dataset.preset); });
+  });
+
+  /* options */
+  [["chkFigure", "figure"], ["chkCircle", "circle"], ["chkLattice", "lattice"], ["chkBasis", "basis"], ["chkGrid", "grid"]].forEach(function (pair) {
+    var box = $(pair[0]);
+    box.checked = state.show[pair[1]];
+    box.addEventListener("change", function () { state.show[pair[1]] = box.checked; drawAll(); updateHash(); });
+  });
+  $("resetUV").addEventListener("click", function () { state.u = [1, 0]; state.v = [0, 1]; drawAll(); updateHash(); });
+
+  /* zoom */
+  document.querySelectorAll(".zoom button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var key = this.dataset.view === "d" ? "Wd" : "Wc";
+      var i = ZOOMS.indexOf(state[key]) + Number(this.dataset.dir);
+      if (i < 0 || i >= ZOOMS.length) return;
+      state[key] = ZOOMS[i];
+      if (key === "Wd") { /* keep u and v inside the window */
+        ["u", "v"].forEach(function (k) { state[k] = state[k].map(function (x) { return Math.max(-state.Wd, Math.min(state.Wd, x)); }); });
+      }
+      drawAll(); updateHash();
+    });
+  });
+
+  setupDrag();
+
+  /* restore a shared link, or start fresh */
+  var loaded = loadHash();
+  var E = state.entries;
+  setDims(state.m, state.n);
+  state.entries = E; buildGrid();
+  ["chkFigure", "chkCircle", "chkLattice", "chkBasis", "chkGrid"].forEach(function (id, i) {
+    $(id).checked = state.show[["figure", "circle", "lattice", "basis", "grid"][i]];
+  });
+  if (loaded && loaded.mapped) doMap(); else drawAll();
+}
+document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>
