@@ -25,6 +25,7 @@
   --hover-bg: #e2e8f3;
   --uvec: #c0392b;
   --vvec: #2b64c4;
+  --wvec: #2e8b57;
   --font-body: Charter, "Bitstream Charter", Georgia, "Times New Roman", serif;
   --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -44,6 +45,7 @@
     --hover-bg: #2b3242;
     --uvec: #e5756a;
     --vvec: #7ea6ef;
+    --wvec: #6fcf97;
   }
 }
 :root[data-theme="dark"] {
@@ -60,6 +62,7 @@
   --hover-bg: #2b3242;
   --uvec: #e5756a;
   --vvec: #7ea6ef;
+  --wvec: #6fcf97;
 }
 
 * { box-sizing: border-box; }
@@ -252,14 +255,23 @@ svg.plane.dragging { cursor: grabbing; }
 .plane .fig { fill: var(--accent); fill-opacity: .22; stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; }
 .plane .figdetail { fill: var(--accent); stroke: none; }
 .plane .figline { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; }
+.plane .figsolid { fill: var(--accent); fill-opacity: .9; stroke: none; }
 .plane .circ { fill: none; stroke: var(--alert); stroke-width: 1.8; }
+.plane .sph { fill: none; stroke: var(--alert); stroke-width: 1.1; stroke-opacity: .7; }
+.plane .sphfill { fill: var(--alert); fill-opacity: .22; stroke: var(--alert); stroke-width: 1.6; }
+.plane .axlbl { fill: var(--muted); font-family: var(--font-body); font-style: italic; font-size: 14px; }
+.plane .mesh { stroke-linejoin: round; }
+svg.plane.rot { cursor: grab; }
+svg.plane.rot.dragging { cursor: grabbing; }
 .plane .lat { stroke-opacity: .45; stroke-width: 1; }
 .plane .lat.lu { stroke: var(--uvec); }
 .plane .lat.lv { stroke: var(--vvec); }
+.plane .lat.lw { stroke: var(--wvec); }
 .plane .latpt { fill: var(--fg); fill-opacity: .8; }
 .plane .usq { fill: var(--fg); fill-opacity: .08; stroke: none; }
 .plane .uvec { stroke: var(--uvec); fill: var(--uvec); }
 .plane .vvec { stroke: var(--vvec); fill: var(--vvec); }
+.plane .wvec { stroke: var(--wvec); fill: var(--wvec); }
 .plane .basis { stroke: var(--fg); fill: var(--fg); }
 .plane .shaft { fill: none; stroke-width: 2; stroke-linecap: round; }
 .plane .basis.shaft { stroke-width: 1.6; }
@@ -267,6 +279,8 @@ svg.plane.dragging { cursor: grabbing; }
 .plane .hit { cursor: grab; fill: transparent; stroke: none; pointer-events: all; }
 .plane .uvsq { fill: var(--vvec); fill: color-mix(in srgb, var(--uvec), var(--vvec)); fill-opacity: .14; stroke: none; }
 #svgDom .figgroup { cursor: move; }
+#matTex { cursor: pointer; }
+#matTex:hover { background: var(--hover-bg); }
 .plane .lbl { font-family: var(--font-body); font-style: italic; font-size: 14px; }
 .plane .note { fill: var(--muted); font-family: var(--font-ui); font-size: 13px; }
 
@@ -275,7 +289,16 @@ svg.plane.dragging { cursor: grabbing; }
 .swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; vertical-align: -1px; }
 .swatch.u { background: var(--uvec); }
 .swatch.v { background: var(--vvec); }
-#latticeTools { display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: center; }
+.swatch.w { background: var(--wvec); }
+.swatch[hidden] { display: none; }
+#latticeTools { display: flex; flex-wrap: wrap; gap: .3rem .9rem; align-items: center; }
+.vecrow { display: flex; flex-wrap: wrap; gap: .15rem .9rem; align-items: center; }
+.vec { display: inline-flex; align-items: center; font-size: 1rem; }
+.vectex { cursor: pointer; padding: 0 .25rem; }
+.vectex:hover { background: var(--hover-bg); }
+.vecedit { display: inline-flex; align-items: center; gap: .15rem; font-family: var(--font-body); font-style: italic; }
+.vecedit[hidden] { display: none; }
+input.cell.vcell { width: 3.2rem; min-width: 0; padding: .2rem .1rem; font-size: .9rem; }
 #latticeTools[hidden] { display: none; }
 #uvRead { font-size: 1rem; }
 
@@ -326,7 +349,7 @@ footer.doc {
           <p class="hint">Entries like <code>-3</code>, <code>1/2</code>, <code>0.25</code>, or <code>sqrt(3)/2</code>.</p>
         </div>
         <div id="mapBox" hidden>
-          <div id="matTex" class="texmat"></div>
+          <div id="matTex" class="texmat" title="Click to edit"></div>
         </div>
         <p class="msg" id="editMsg"></p>
       </div>
@@ -348,14 +371,14 @@ footer.doc {
       <p class="card-title" style="margin:0">Show</p>
       <div class="optrow">
         <label class="fld chk"><input type="checkbox" id="chkFigure" checked> Figure</label>
-        <label class="fld chk"><input type="checkbox" id="chkCircle"> Unit circle</label>
-        <label class="fld chk"><input type="checkbox" id="chkLattice"> Lattice <span class="swatch u" aria-hidden="true"></span><span class="swatch v" aria-hidden="true"></span></label>
+        <label class="fld chk"><input type="checkbox" id="chkCircle"> <span id="circleLbl">Unit circle</span></label>
+        <label class="fld chk"><input type="checkbox" id="chkLattice"> Lattice <span class="swatch u" aria-hidden="true"></span><span class="swatch v" aria-hidden="true"></span><span class="swatch w" id="swW" aria-hidden="true" hidden></span></label>
         <label class="fld chk"><input type="checkbox" id="chkBasis"> Standard basis</label>
         <label class="fld chk"><input type="checkbox" id="chkGrid" checked> Grid</label>
       </div>
       <div id="latticeTools" hidden>
-        <span id="uvRead"></span>
-        <button class="filebox" id="resetUV">Reset <i>u</i>, <i>v</i></button>
+        <div class="vecrow" id="vecRow"></div>
+        <button class="filebox" id="resetUV">Reset</button>
       </div>
     </div>
   </section>
@@ -368,6 +391,7 @@ footer.doc {
         <span class="zoom"><button class="filebox" data-view="d" data-dir="1" title="Zoom out" aria-label="Zoom out domain">&minus;</button><button class="filebox" data-view="d" data-dir="-1" title="Zoom in" aria-label="Zoom in domain">+</button></span>
       </div>
       <svg id="svgDom" class="plane" viewBox="0 0 400 400" role="img" aria-label="Domain"></svg>
+      <p class="hint" style="margin:.35rem 0 0">Scroll to zoom. In 3D, drag to rotate the view.</p>
     </div>
     <div class="view">
       <div class="viewhead">
@@ -389,7 +413,8 @@ footer.doc {
 var $ = function (id) { return document.getElementById(id); };
 var SVGNS = "http://www.w3.org/2000/svg";
 var VB = 400;                    /* viewBox is VB x VB pixels */
-var ZOOMS = [2, 3, 4, 5, 6, 8, 10, 15, 20];
+var DEG = Math.PI / 180;
+var WMIN = 0.5, WMAX = 60;       /* zoom range (half-width of the window) */
 
 /* ===================== entry expressions =====================
  * Entries are tiny arithmetic expressions: numbers, fractions, decimals,
@@ -545,12 +570,20 @@ var state = {
   entries: [["0", "0"], ["0", "0"]],  /* strings shown in the grid */
   A: null,       /* numeric m x n matrix once mapped */
   Atex: null,    /* matching LaTeX entries */
-  u: [1, 0], v: [0, 1],
-  fo: [0, 0],    /* where the figure has been dragged to */
+  vec: { u: ["1", "0", "0"], v: ["0", "1", "0"], w: ["0", "0", "1"] },  /* lattice vectors, as entered */
+  fo: [0, 0],    /* where the 2D figure has been dragged to */
   show: { figure: true, circle: false, lattice: false, basis: false, grid: true },
-  Wd: 5, Wc: 5   /* half-widths of the domain and codomain windows */
+  Wd: 5, Wc: 5,  /* half-widths of the domain and codomain windows */
+  cam: { yaw: -30 * DEG, phi: 25 * DEG }   /* shared orbit camera for 3D views */
 };
+var VEC_DEFAULT = { u: ["1", "0", "0"], v: ["0", "1", "0"], w: ["0", "0", "1"] };
 var is2x2 = function () { return state.m === 2 && state.n === 2; };
+function vecVal(k) {
+  return state.vec[k].slice(0, state.n).map(function (s) { var e = parseEntry(s); return e ? e.val : 0; });
+}
+function vecTex(k) {
+  return k + " = (" + state.vec[k].slice(0, state.n).map(function (s) { var e = parseEntry(s); return e ? e.tex : "?"; }).join(",\\, ") + ")";
+}
 
 /* ===================== KaTeX ===================== */
 function kt(el, tex, display) {
@@ -589,12 +622,7 @@ function buildGrid() {
       inp.autocomplete = "off";
       inp.spellcheck = false;
       inp.setAttribute("aria-label", "Row " + (r + 1) + ", column " + (j + 1));
-      inp.addEventListener("focus", function () {
-        /* the default 0 clears on focus so typing can start immediately;
-         * blur restores it if nothing was entered */
-        if (this.value.trim() === "0") { this.value = ""; }
-        else { this.select(); }
-      });
+      inp.addEventListener("focus", cellFocus);
       inp.addEventListener("blur", function () {
         if (this.value.trim() === "") this.value = "0";
         state.entries[Number(this.dataset.r)][Number(this.dataset.c)] = this.value;
@@ -608,6 +636,12 @@ function buildGrid() {
       grid.appendChild(inp);
     }
   }
+}
+/* the default 0 clears on focus so typing can start immediately;
+ * blur restores it if nothing was entered */
+function cellFocus() {
+  if (this.value.trim() === "0") { this.value = ""; }
+  else { this.select(); }
 }
 /* Enter finishes entry and maps; arrows (and Tab) move between cells. */
 function cellKeydown(ev) {
@@ -682,7 +716,7 @@ function doEdit() {
   $("mapBox").hidden = true; $("mapBtns").hidden = true;
   $("editBox").hidden = false; $("editBtns").hidden = false;
   buildGrid();
-  var first = document.querySelector("input.cell");
+  var first = document.querySelector("#grid input.cell");
   if (first) first.focus();
   updateHash();
 }
@@ -697,11 +731,14 @@ function setDims(m, n) {
   var sup = { 2: "²", 3: "³" };
   $("domTitle").textContent = "Domain ℝ" + sup[n];
   $("codTitle").textContent = "Codomain ℝ" + sup[m];
+  $("circleLbl").textContent = n === 3 ? "Unit sphere" : "Unit circle";
+  $("swW").hidden = n !== 3;
   document.querySelectorAll("[data-preset]").forEach(function (b) { b.disabled = !is2x2(); });
+  renderVecTools();
   drawAll();
 }
 
-/* ===================== example maps ===================== */
+/* ===================== example maps (2 x 2) ===================== */
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a; }
 function fracStr(n, d) {
@@ -710,17 +747,6 @@ function fracStr(n, d) {
   return d === 1 ? String(n) : n + "/" + d;
 }
 function negStr(s) { return s === "0" ? "0" : (s[0] === "-" ? s.slice(1) : "-" + s); }
-/* "the x-axis", "the y-axis", "the line y = \tfrac{1}{2}x" for the line through (a, b) */
-function lineTex(a, b) {
-  if (b === 0) return "\\text{the } x\\text{-axis}";
-  if (a === 0) return "\\text{the } y\\text{-axis}";
-  var g = gcd(a, b); a /= g; b /= g;
-  if (a < 0) { a = -a; b = -b; }
-  var coef;
-  if (a === 1) coef = (b === 1 ? "" : b === -1 ? "-" : String(b));
-  else coef = (b < 0 ? "-" : "") + "\\tfrac{" + Math.abs(b) + "}{" + a + "}";
-  return "\\text{the line } y = " + coef + "x";
-}
 var ROT = { 30: ["sqrt(3)/2", "1/2"], 45: ["sqrt(2)/2", "sqrt(2)/2"], 60: ["1/2", "sqrt(3)/2"], 90: ["0", "1"],
             120: ["-1/2", "sqrt(3)/2"], 135: ["-sqrt(2)/2", "sqrt(2)/2"], 150: ["-sqrt(3)/2", "1/2"], 180: ["-1", "0"] };
 var LINES = [[1, 0], [0, 1], [1, 1], [1, -1], [2, 1], [1, 2], [3, 1], [1, 3], [-1, 2]];
@@ -733,45 +759,177 @@ function freshPick(kind, list, key) {
   return k;
 }
 function preset(kind) {
-  var E, note;
+  var E;
   if (kind === "rotation") {
     var sign = pick([1, 1, -1]);
     var deg = freshPick("rotation", Object.keys(ROT).map(Number), function (d) { return d; });
-    var cs = ROT[deg], c = cs[0], s = cs[1];
-    if (sign < 0) s = negStr(s);
-    E = [[c, negStr(s)], [s, c]];
-    note = "\\text{Rotation by } " + deg + "^\\circ \\text{ " + (sign < 0 ? "clockwise" : "counterclockwise") + "}";
+    var cs = ROT[deg], c = cs[0], sn = cs[1];
+    if (sign < 0) sn = negStr(sn);
+    E = [[c, negStr(sn)], [sn, c]];
   } else if (kind === "dilation") {
     var k = freshPick("dilation", ["2", "3", "1/2", "3/2", "-1", "-2", "1/3"], String);
     E = [[k, "0"], ["0", k]];
-    var kp = parseEntry(k);
-    note = "\\text{Dilation by a factor of } " + kp.tex;
   } else if (kind === "reflection") {
     var L = freshPick("reflection", LINES, String), a = L[0], b = L[1], q = a * a + b * b;
     E = [[fracStr(a * a - b * b, q), fracStr(2 * a * b, q)], [fracStr(2 * a * b, q), fracStr(b * b - a * a, q)]];
-    note = "\\text{Reflection across } " + lineTex(a, b);
   } else if (kind === "shear") {
     var h = pick([true, false]);
     var sk = freshPick("shear", ["1", "2", "-1", "1/2", "-2", "3/2"], String);
     E = h ? [["1", sk], ["0", "1"]] : [["1", "0"], [sk, "1"]];
-    note = "\\text{" + (h ? "Horizontal" : "Vertical") + " shear by } " + parseEntry(sk).tex;
   } else if (kind === "projection") {
     var P = freshPick("projection", LINES, String), pa = P[0], pb = P[1], pq = pa * pa + pb * pb;
     E = [[fracStr(pa * pa, pq), fracStr(pa * pb, pq)], [fracStr(pa * pb, pq), fracStr(pb * pb, pq)]];
-    note = "\\text{Projection onto } " + lineTex(pa, pb);
   } else {
     do {
       E = [[0, 0], [0, 0]].map(function (r) { return r.map(function () { return String(Math.floor(Math.random() * 7) - 3); }); });
     } while (E.every(function (r) { return r.every(function (x) { return x === "0"; }); }));
-    note = "\\text{A random matrix with small integer entries}";
   }
   setEntries(E);
   doMap();
-  void note;   /* description kept for a possible future tooltip */
 }
 
+/* ===================== lattice vector editor ===================== */
+function renderVecTools() {
+  var row = $("vecRow");
+  row.innerHTML = "";
+  ["u", "v", "w"].slice(0, state.n).forEach(function (k) {
+    var box = document.createElement("span");
+    box.className = "vec"; box.dataset.k = k;
+    var tex = document.createElement("span");
+    tex.className = "vectex"; tex.title = "Click to edit"; tex.tabIndex = 0;
+    tex.addEventListener("click", function () { openVecEdit(box); });
+    tex.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openVecEdit(box); } });
+    var ed = document.createElement("span");
+    ed.className = "vecedit"; ed.hidden = true;
+    ed.appendChild(document.createTextNode(k + " = ("));
+    for (var i = 0; i < state.n; i++) {
+      if (i) ed.appendChild(document.createTextNode(","));
+      var inp = document.createElement("input");
+      inp.className = "cell vcell"; inp.dataset.i = i;
+      inp.autocomplete = "off"; inp.spellcheck = false;
+      inp.setAttribute("aria-label", k + " coordinate " + (i + 1));
+      inp.addEventListener("focus", cellFocus);
+      inp.addEventListener("input", function () { this.classList.remove("bad"); });
+      inp.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") { ev.preventDefault(); commitVec(box, true); }
+        else if (ev.key === "Escape") { ev.preventDefault(); closeVecEdit(box); }
+        else if (ev.key === "ArrowRight" && this.selectionStart === this.value.length && this.nextElementSibling) {
+          var nx = this.parentNode.querySelector('input[data-i="' + (Number(this.dataset.i) + 1) + '"]'); if (nx) { ev.preventDefault(); nx.focus(); }
+        } else if (ev.key === "ArrowLeft" && this.selectionStart === 0) {
+          var pv = this.parentNode.querySelector('input[data-i="' + (Number(this.dataset.i) - 1) + '"]'); if (pv) { ev.preventDefault(); pv.focus(); }
+        }
+      });
+      ed.appendChild(inp);
+    }
+    ed.appendChild(document.createTextNode(")"));
+    ed.addEventListener("focusout", function (ev) {
+      if (ev.relatedTarget && ed.contains(ev.relatedTarget)) return;
+      if (!ed.hidden) commitVec(box, false);
+    });
+    box.appendChild(tex); box.appendChild(ed);
+    row.appendChild(box);
+  });
+  refreshVecTex();
+}
+function refreshVecTex() {
+  document.querySelectorAll("#vecRow .vec").forEach(function (box) { kt(box.querySelector(".vectex"), vecTex(box.dataset.k)); });
+}
+function openVecEdit(box) {
+  var k = box.dataset.k, ed = box.querySelector(".vecedit");
+  ed.querySelectorAll("input").forEach(function (inp) { inp.value = state.vec[k][Number(inp.dataset.i)]; inp.classList.remove("bad"); });
+  box.querySelector(".vectex").hidden = true;
+  ed.hidden = false;
+  ed.querySelector("input").focus();
+}
+function closeVecEdit(box) {
+  box.querySelector(".vecedit").hidden = true;
+  box.querySelector(".vectex").hidden = false;
+}
+/* Enter keeps the editor open on a bad entry; clicking away reverts instead. */
+function commitVec(box, stayOnError) {
+  var k = box.dataset.k, ed = box.querySelector(".vecedit"), vals = state.vec[k].slice(), ok = true;
+  ed.querySelectorAll("input").forEach(function (inp) {
+    var s = inp.value.trim() === "" ? "0" : inp.value;
+    if (!parseEntry(s)) { ok = false; inp.classList.add("bad"); }
+    vals[Number(inp.dataset.i)] = s;
+  });
+  if (!ok) { if (stayOnError) return; closeVecEdit(box); return; }
+  state.vec[k] = vals;
+  closeVecEdit(box);
+  refreshVecTex();
+  drawAll();
+  updateHash();
+}
+
+/* ===================== small linear algebra ===================== */
+function ident(n) { var I = []; for (var i = 0; i < n; i++) { var r = []; for (var j = 0; j < n; j++) r.push(i === j ? 1 : 0); I.push(r); } return I; }
+function matVec(M, p) { return M.map(function (r) { var s = 0; for (var i = 0; i < p.length; i++) s += r[i] * p[i]; return s; }); }
+function matMul(A, B) { return A.map(function (r) { return B[0].map(function (_, j) { var s = 0; for (var k = 0; k < B.length; k++) s += r[k] * B[k][j]; return s; }); }); }
+function add(a, b) { return a.map(function (x, i) { return x + b[i]; }); }
+function scale(a, k) { return a.map(function (x) { return x * k; }); }
+function dot(a, b) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
+function norm(a) { return Math.sqrt(dot(a, a)); }
+function cross3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+/* orthonormal basis of the row space (Gram-Schmidt); its length is the rank */
+function rowBasis(M) {
+  var rs = [];
+  M.forEach(function (r) {
+    var x = r.slice();
+    rs.forEach(function (q) { x = add(x, scale(q, -dot(x, q))); });
+    var l = norm(x);
+    if (l > 1e-7) rs.push(scale(x, 1 / l));
+  });
+  return rs;
+}
+/* camera: rows give screen x, screen y, and depth toward the viewer */
+function camera() {
+  var ps = Math.sin(state.cam.yaw), pc = Math.cos(state.cam.yaw), es = Math.sin(state.cam.phi), ec = Math.cos(state.cam.phi);
+  return [[pc, -ps, 0], [ps * es, pc * es, ec], [-ps * ec, -pc * ec, es]];
+}
+
+/* ===================== figures ===================== */
+/* The default 2D figure: a running figure traced from guy.png (see guy.svg),
+ * in math coordinates (y up), about 3 units tall.  Replace FIGURE with any
+ * SVG markup; keep vector-effect="non-scaling-stroke" on stroked shapes. */
+var FIGURE = '<path class="figsolid" fill-rule="evenodd" d="M0.514 0.4C0.506 0.401 0.505 0.399 0.503 0.411C0.501 0.422 0.493 0.443 0.503 0.469C0.512 0.495 0.532 0.533 0.56 0.566C0.588 0.599 0.631 0.642 0.669 0.669C0.707 0.696 0.768 0.689 0.789 0.726C0.81 0.763 0.782 0.788 0.794 0.891C0.806 0.994 0.846 1.245 0.863 1.343C0.88 1.441 0.881 1.438 0.897 1.48C0.913 1.522 0.946 1.571 0.96 1.594C0.974 1.617 0.97 1.61 0.983 1.617C0.996 1.624 1.002 1.641 1.04 1.634C1.078 1.627 1.143 1.594 1.211 1.577C1.279 1.56 1.417 1.46 1.446 1.531C1.475 1.602 1.402 1.893 1.383 2.006C1.364 2.119 1.411 2.177 1.331 2.211C1.251 2.245 0.992 2.203 0.903 2.211C0.815 2.219 0.825 2.237 0.8 2.257C0.775 2.277 0.762 2.28 0.754 2.331C0.746 2.381 0.749 2.494 0.754 2.56C0.759 2.626 0.773 2.681 0.783 2.726C0.793 2.771 0.81 2.797 0.817 2.829C0.824 2.861 0.833 2.896 0.823 2.92C0.812 2.944 0.771 2.953 0.754 2.971C0.737 2.989 0.727 3.013 0.72 3.029C0.713 3.045 0.712 3.059 0.714 3.069C0.716 3.079 0.713 3.09 0.731 3.091C0.749 3.092 0.798 3.025 0.823 3.074C0.848 3.123 0.868 3.329 0.88 3.383C0.892 3.437 0.889 3.397 0.897 3.4C0.905 3.403 0.922 3.405 0.931 3.4C0.941 3.395 0.951 3.408 0.954 3.371C0.957 3.334 0.944 3.209 0.949 3.177C0.954 3.145 0.976 3.182 0.983 3.177C0.99 3.172 0.987 3.153 0.994 3.149C1.001 3.145 1.016 3.156 1.023 3.154C1.03 3.152 1.026 3.141 1.034 3.137C1.042 3.133 1.061 3.136 1.069 3.131C1.077 3.126 1.078 3.125 1.08 3.109C1.082 3.093 1.084 3.058 1.08 3.034C1.076 3.01 1.077 2.994 1.057 2.966C1.037 2.939 0.979 2.885 0.96 2.869C0.941 2.853 0.952 2.932 0.943 2.869C0.933 2.806 0.909 2.566 0.903 2.491C0.897 2.416 0.902 2.434 0.909 2.417C0.916 2.4 0.903 2.396 0.943 2.389C0.983 2.382 1.074 2.372 1.149 2.377C1.224 2.382 1.348 2.375 1.394 2.417C1.44 2.459 1.44 2.588 1.423 2.629C1.406 2.67 1.307 2.608 1.291 2.663C1.275 2.718 1.316 2.906 1.326 2.96C1.336 3.014 1.269 2.976 1.349 2.989C1.429 3.002 1.727 3.043 1.806 3.04C1.885 3.037 1.82 3.032 1.823 2.971C1.826 2.91 1.852 2.731 1.823 2.674C1.794 2.617 1.678 2.663 1.651 2.629C1.624 2.595 1.638 2.497 1.663 2.469C1.688 2.441 1.772 2.466 1.8 2.463C1.829 2.46 1.828 2.455 1.834 2.451C1.84 2.447 1.758 2.461 1.834 2.44C1.91 2.419 2.207 2.345 2.291 2.326C2.375 2.307 2.279 2.268 2.337 2.326C2.395 2.384 2.585 2.608 2.64 2.674C2.695 2.74 2.666 2.692 2.669 2.72C2.672 2.748 2.656 2.815 2.657 2.84C2.658 2.865 2.665 2.863 2.674 2.869C2.683 2.875 2.7 2.867 2.709 2.874C2.719 2.881 2.721 2.905 2.731 2.909C2.74 2.913 2.752 2.897 2.766 2.897C2.78 2.897 2.803 2.912 2.817 2.909C2.831 2.906 2.838 2.871 2.851 2.88C2.864 2.889 2.88 2.938 2.897 2.96C2.914 2.982 2.937 3.004 2.954 3.011C2.971 3.018 2.991 3.011 3.0 3.0C3.009 2.989 3.01 2.971 3.006 2.943C3.002 2.915 2.99 2.87 2.977 2.834C2.964 2.798 2.934 2.748 2.926 2.726C2.918 2.704 2.919 2.71 2.926 2.703C2.933 2.696 2.964 2.696 2.971 2.686C2.978 2.675 2.981 2.652 2.971 2.64C2.961 2.628 2.938 2.618 2.909 2.611C2.879 2.604 2.876 2.675 2.794 2.6C2.712 2.525 2.484 2.235 2.417 2.16C2.35 2.085 2.424 2.15 2.394 2.149C2.365 2.148 2.3 2.139 2.24 2.154C2.18 2.169 2.1 2.219 2.034 2.24C1.968 2.261 1.883 2.274 1.846 2.28C1.809 2.286 1.818 2.314 1.811 2.274C1.804 2.234 1.804 2.138 1.806 2.04C1.808 1.942 1.815 1.772 1.823 1.686C1.831 1.6 1.843 1.555 1.851 1.526C1.859 1.497 1.841 1.493 1.869 1.514C1.897 1.535 1.945 1.595 2.017 1.651C2.089 1.707 2.239 1.801 2.303 1.851C2.367 1.901 2.366 1.92 2.4 1.949C2.434 1.978 2.486 2.01 2.509 2.023C2.532 2.036 2.524 2.035 2.537 2.029C2.55 2.023 2.56 2.028 2.589 1.989C2.618 1.95 2.654 1.895 2.709 1.794C2.764 1.693 2.857 1.443 2.92 1.383C2.983 1.323 3.018 1.429 3.086 1.434C3.154 1.439 3.279 1.419 3.331 1.411C3.383 1.403 3.376 1.399 3.4 1.383C3.424 1.367 3.458 1.332 3.474 1.314C3.49 1.296 3.493 1.287 3.497 1.274C3.501 1.261 3.501 1.242 3.497 1.234C3.493 1.226 3.498 1.214 3.474 1.223C3.45 1.233 3.383 1.278 3.354 1.291C3.325 1.304 3.334 1.301 3.303 1.303C3.272 1.305 3.199 1.31 3.166 1.303C3.133 1.296 3.145 1.28 3.103 1.263C3.061 1.246 2.957 1.21 2.914 1.2C2.871 1.19 2.864 1.198 2.846 1.206C2.828 1.214 2.811 1.223 2.806 1.246C2.801 1.269 2.823 1.321 2.817 1.343C2.811 1.365 2.778 1.367 2.771 1.377C2.764 1.387 2.787 1.378 2.777 1.4C2.767 1.422 2.756 1.443 2.709 1.509C2.662 1.575 2.557 1.772 2.497 1.794C2.437 1.816 2.393 1.679 2.349 1.64C2.305 1.601 2.278 1.597 2.234 1.56C2.19 1.523 2.135 1.459 2.086 1.417C2.036 1.375 1.966 1.334 1.937 1.309C1.908 1.284 1.928 1.279 1.914 1.269C1.9 1.258 1.882 1.251 1.851 1.246C1.82 1.241 1.76 1.234 1.726 1.24C1.692 1.246 1.687 1.273 1.646 1.28C1.605 1.287 1.517 1.272 1.48 1.28C1.443 1.288 1.456 1.308 1.423 1.326C1.39 1.344 1.338 1.375 1.28 1.389C1.222 1.403 1.121 1.449 1.074 1.411C1.027 1.373 1.02 1.254 1.0 1.16C0.98 1.066 0.962 0.923 0.954 0.846C0.946 0.769 0.958 0.734 0.954 0.697C0.95 0.66 0.941 0.64 0.931 0.623C0.922 0.606 0.917 0.598 0.897 0.594C0.877 0.59 0.84 0.607 0.811 0.6C0.783 0.593 0.757 0.573 0.726 0.554C0.695 0.535 0.652 0.511 0.623 0.486C0.594 0.461 0.572 0.42 0.554 0.406C0.536 0.392 0.522 0.399 0.514 0.4Z"/>';
+/* The default 3D figure: a small house (polygon mesh, z up).  Faces list
+ * vertex indices; "tone" darkens a face, "decalOf" draws a face right after
+ * the face it sits on (door, window). */
+var HOUSE = (function () {
+  var x0 = 0.5, x1 = 2.5, y0 = 0.5, y1 = 2.0, z1 = 1.2, ry = 1.25, rz = 2.0;
+  function roofZ(y) { return z1 + (y - y0) / (ry - y0) * (rz - z1); }
+  var V = [
+    [x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0],
+    [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
+    [x0, ry, rz], [x1, ry, rz],
+    [2.0, 0.7, roofZ(0.7)], [2.3, 0.7, roofZ(0.7)], [2.3, 1.0, roofZ(1.0)], [2.0, 1.0, roofZ(1.0)],
+    [2.0, 0.7, 2.3], [2.3, 0.7, 2.3], [2.3, 1.0, 2.3], [2.0, 1.0, 2.3],
+    [0.8, y0, 0], [1.2, y0, 0], [1.2, y0, 0.75], [0.8, y0, 0.75],
+    [x1, 0.9, 0.5], [x1, 1.5, 0.5], [x1, 1.5, 0.95], [x1, 0.9, 0.95]
+  ];
+  var F = [
+    { v: [0, 3, 2, 1] }, { v: [0, 1, 5, 4] }, { v: [1, 2, 6, 5] }, { v: [2, 3, 7, 6] }, { v: [3, 0, 4, 7] },
+    { v: [4, 5, 9, 8] }, { v: [6, 7, 8, 9] }, { v: [4, 8, 7] }, { v: [5, 6, 9] },
+    { v: [10, 11, 15, 14] }, { v: [11, 12, 16, 15] }, { v: [12, 13, 17, 16] }, { v: [13, 10, 14, 17] }, { v: [14, 15, 16, 17] },
+    { v: [18, 19, 20, 21], tone: .55, decalOf: 1 }, { v: [22, 23, 24, 25], tone: .55, decalOf: 2 }
+  ];
+  return { verts: V, faces: F };
+})();
+function circlePts(N) { var p = []; for (var i = 0; i < N; i++) { var t = i / N * 2 * Math.PI; p.push([Math.cos(t), Math.sin(t)]); } return p; }
+/* wireframe of the unit sphere: four meridians, the equator, two parallels */
+var SPHERE = (function () {
+  var cs = [], N = 48;
+  function circ(f) { var p = []; for (var i = 0; i < N; i++) p.push(f(i / N * 2 * Math.PI)); return p; }
+  [0, 45, 90, 135].forEach(function (a) {
+    var ca = Math.cos(a * DEG), sa = Math.sin(a * DEG);
+    cs.push(circ(function (t) { return [Math.cos(t) * ca, Math.cos(t) * sa, Math.sin(t)]; }));
+  });
+  cs.push(circ(function (t) { return [Math.cos(t), Math.sin(t), 0]; }));
+  [0.5, -0.5].forEach(function (z) { var r = Math.sqrt(1 - z * z); cs.push(circ(function (t) { return [r * Math.cos(t), r * Math.sin(t), z]; })); });
+  return cs;
+})();
+
 /* ===================== geometry helpers ===================== */
-function apply(M, p) { return [M[0][0] * p[0] + M[0][1] * p[1], M[1][0] * p[0] + M[1][1] * p[1]]; }
 function makeP(W) {
   var s = VB / (2 * W), c = VB / 2;
   return {
@@ -781,7 +939,7 @@ function makeP(W) {
   };
 }
 function inBox(p, W) { return Math.abs(p[0]) <= W + 1e-9 && Math.abs(p[1]) <= W + 1e-9; }
-/* Liang–Barsky clip of the line p + t d to the square [-W, W]^2 */
+/* Liang-Barsky clip of the line p + t d to the square [-W, W]^2 */
 function clipLine(p, d, W) {
   var t0 = -Infinity, t1 = Infinity;
   for (var i = 0; i < 2; i++) {
@@ -792,7 +950,7 @@ function clipLine(p, d, W) {
   if (!(t0 < t1)) return null;
   return [p[0] + t0 * d[0], p[1] + t0 * d[1], p[0] + t1 * d[0], p[1] + t1 * d[1]];
 }
-/* Lines and points of the lattice {a u + b v : a, b integers} inside the window. */
+/* Lines and points of the plane lattice {a u + b v} inside the window. */
 function latticeGeom(u, v, W) {
   var out = { lines: [], points: [], tooFine: false };   /* lines: [x1,y1,x2,y2,"lu"|"lv"] */
   var eps = 1e-9, lu = Math.hypot(u[0], u[1]), lv = Math.hypot(v[0], v[1]);
@@ -827,6 +985,48 @@ function latticeGeom(u, v, W) {
     }
   return out;
 }
+/* A block of the lattice spanned by vs (coefficients -K..K): points and the
+ * edges joining neighbours, tagged by direction. */
+function latticeBlock(vs, K) {
+  var k = vs.length, pts = [], segs = [], idx = [];
+  var zero = vs[0].map(function () { return 0; });
+  function rec(pre) { if (pre.length === k) { idx.push(pre); return; } for (var a = -K; a <= K; a++) rec(pre.concat([a])); }
+  rec([]);
+  function at(c) { var p = zero; for (var i = 0; i < k; i++) p = add(p, scale(vs[i], c[i])); return p; }
+  idx.forEach(function (c) {
+    var p = at(c); pts.push(p);
+    for (var i = 0; i < k; i++) if (c[i] < K) { var d = c.slice(); d[i]++; segs.push({ a: p, b: at(d), fam: i }); }
+  });
+  return { points: pts, segments: segs };
+}
+/* faces of the parallelogram / parallelepiped spanned by vs, as polygon prims */
+function boxFaces(vs, cls) {
+  var k = vs.length, zero = vs[0].map(function () { return 0; });
+  function corner(bits) { var p = zero; for (var i = 0; i < k; i++) if (bits[i]) p = add(p, vs[i]); return p; }
+  if (k === 2) return [{ t: "polygon", pts: [corner([0, 0]), corner([1, 0]), corner([1, 1]), corner([0, 1])], cls: cls }];
+  var out = [];
+  for (var ax = 0; ax < 3; ax++) for (var s = 0; s < 2; s++) {
+    var o = [0, 1, 2].filter(function (i) { return i !== ax; }), pts = [];
+    [[0, 0], [1, 0], [1, 1], [0, 1]].forEach(function (q) { var bb = [0, 0, 0]; bb[ax] = s; bb[o[0]] = q[0]; bb[o[1]] = q[1]; pts.push(corner(bb)); });
+    out.push({ t: "polygon", pts: pts, cls: cls });
+  }
+  return out;
+}
+
+/* ===================== colours for the shaded mesh ===================== */
+function cssColor(name) {
+  var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  var m = v.match(/^#([0-9a-f]{6})$/i);
+  if (!m) return [128, 128, 128];
+  return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)];
+}
+function mixRGB(a, b, t) { return a.map(function (x, i) { return x + (b[i] - x) * t; }); }
+function rgbStr(c) { return "rgb(" + c.map(Math.round).join(",") + ")"; }
+var themeCols = null;
+function themeColors() {
+  if (!themeCols) themeCols = { bg: cssColor("--bg"), fg: cssColor("--fg"), accent: cssColor("--accent") };
+  return themeCols;
+}
 
 /* ===================== drawing ===================== */
 function el(name, attrs, parent) {
@@ -835,12 +1035,37 @@ function el(name, attrs, parent) {
   if (parent) parent.appendChild(e);
   return e;
 }
-function gridStep(W) { return W <= 6 ? 1 : W <= 12 ? 2 : W <= 30 ? 5 : 10; }
-function drawGrid(svg, P) {
-  var W = P.W, step = gridStep(W), k, a, b;
+function gridStep(W) { return W <= 2.5 ? 0.5 : W <= 6 ? 1 : W <= 12 ? 2 : W <= 30 ? 5 : 10; }
+/* project a point of R^out to pixels (plus depth toward the viewer, in pixels) */
+function projPt(ctx, p) {
+  if (ctx.out === 3) { var q = matVec(ctx.Q, p), a = ctx.P.px(q[0], q[1]); return { x: a[0], y: a[1], d: q[2] * ctx.P.s }; }
+  var b = ctx.P.px(p[0], p[1]);
+  return { x: b[0], y: b[1], d: 0 };
+}
+function pxOf(ctx, p) { var q = projPt(ctx, p); return [q.x, q.y]; }
+function drawGridAxes(ctx) {
+  var P = ctx.P, W = ctx.W, svg = ctx.svg, step = gridStep(W), k, a, b, q;
+  if (ctx.out === 3) {
+    if (state.show.grid) {
+      for (k = -Math.floor(W / step) * step; k <= W + 1e-9; k += step) {
+        if (Math.abs(k) < 1e-9) continue;
+        a = pxOf(ctx, [k, -W, 0]); b = pxOf(ctx, [k, W, 0]);
+        el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
+        a = pxOf(ctx, [-W, k, 0]); b = pxOf(ctx, [W, k, 0]);
+        el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
+      }
+    }
+    [[1, 0, 0], [0, 1, 0], [0, 0, 1]].forEach(function (e, i) {
+      a = pxOf(ctx, scale(e, -W)); b = pxOf(ctx, scale(e, W));
+      el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "axis" }, svg);
+      var l = pxOf(ctx, scale(e, W * 1.04));
+      el("text", { x: l[0], y: l[1] + 5, "text-anchor": "middle", "class": "axlbl" }, svg).textContent = ["x", "y", "z"][i];
+    });
+    return;
+  }
   if (state.show.grid) {
-    for (k = -Math.floor(W / step) * step; k <= W; k += step) {
-      if (k === 0) continue;
+    for (k = -Math.floor(W / step) * step; k <= W + 1e-9; k += step) {
+      if (Math.abs(k) < 1e-9) continue;
       a = P.px(k, -W); b = P.px(k, W);
       el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
       a = P.px(-W, k); b = P.px(W, k);
@@ -853,12 +1078,13 @@ function drawGrid(svg, P) {
   el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "axis" }, svg);
   if (state.show.grid) {
     var lstep = step * (W / step > 8 ? 2 : 1);
-    for (k = -Math.floor(W / lstep) * lstep; k <= W; k += lstep) {
-      if (k === 0) continue;
-      var q = P.px(k, 0);
-      el("text", { x: q[0], y: q[1] + 11, "text-anchor": "middle", "class": "ticklabel" }, svg).textContent = k;
+    for (k = -Math.floor(W / lstep) * lstep; k <= W + 1e-9; k += lstep) {
+      if (Math.abs(k) < 1e-9) continue;
+      var lab = Math.round(k * 100) / 100;
+      q = P.px(k, 0);
+      el("text", { x: q[0], y: q[1] + 11, "text-anchor": "middle", "class": "ticklabel" }, svg).textContent = lab;
       q = P.px(0, k);
-      el("text", { x: q[0] - 4, y: q[1] + 3, "text-anchor": "end", "class": "ticklabel" }, svg).textContent = k;
+      el("text", { x: q[0] - 4, y: q[1] + 3, "text-anchor": "end", "class": "ticklabel" }, svg).textContent = lab;
     }
   }
 }
@@ -866,15 +1092,6 @@ function transformAttr(P, M) {
   /* math (x, y) -> pixel: X = c + s(ax + by), Y = c - s(cx + dy) */
   return "matrix(" + [P.s * M[0][0], -P.s * M[1][0], P.s * M[0][1], -P.s * M[1][1], P.c, P.c].join(" ") + ")";
 }
-/* The default figure, drawn in math coordinates (y up).  Replace FIGURE with
- * any SVG markup; keep vector-effect="non-scaling-stroke" so outlines stay
- * crisp after the transformation. */
-var FIGURE =
-  '<path class="fig" vector-effect="non-scaling-stroke" d="M1.9 2.2 C2.05 2.55 2.35 2.75 2.75 2.7 L2.65 2.2 Z"/>' +
-  '<path class="fig" vector-effect="non-scaling-stroke" d="M3.5 1.5 C3.5 2.05 2.95 2.3 2.3 2.28 C1.8 2.26 1.45 2 1.15 1.62 ' +
-  'L0.3 2.25 L0.3 0.75 L1.15 1.38 C1.45 1 1.8 0.74 2.3 0.72 C2.95 0.7 3.5 0.95 3.5 1.5 Z"/>' +
-  '<circle class="figdetail" cx="3.0" cy="1.72" r="0.11"/>' +
-  '<path class="figline" vector-effect="non-scaling-stroke" d="M3.2 1.25 Q3.35 1.12 3.48 1.3"/>';
 function clampPt(p) { return [Math.min(VB - 6, Math.max(6, p[0])), Math.min(VB - 4, Math.max(10, p[1]))]; }
 function labelEl(svg, pos, cls, main, sub) {
   var t = el("text", { x: pos[0], y: pos[1], "text-anchor": "middle", "class": "lbl " + cls }, svg);
@@ -885,9 +1102,8 @@ function labelEl(svg, pos, cls, main, sub) {
   }
   return t;
 }
-/* arrow from the origin to (x, y); label offset to the "side" (+1 left of travel, -1 right) */
-function arrow(svg, P, x, y, cls, label, sub, side) {
-  var o = P.px(0, 0), t = P.px(x, y);
+/* arrow between pixel points; label offset to the "side" (+1 left of travel, -1 right) */
+function arrowPx(svg, o, t, cls, label, sub, side) {
   var dx = t[0] - o[0], dy = t[1] - o[1], L = Math.hypot(dx, dy);
   if (L < 1) {
     el("circle", { cx: o[0], cy: o[1], r: 3.5, "class": cls + " head" }, svg);
@@ -906,149 +1122,257 @@ function arrow(svg, P, x, y, cls, label, sub, side) {
 function note(svg, text) {
   el("text", { x: VB / 2, y: VB / 2 - 10, "text-anchor": "middle", "class": "note" }, svg).textContent = text;
 }
+function ptsAttr(ctx, pts) { return pts.map(function (p) { return pxOf(ctx, p).join(","); }).join(" "); }
+function renderMesh(ctx, prim) {
+  var pv = prim.verts.map(function (p) { return projPt(ctx, p); });
+  var faces = prim.faces.map(function (f, i) {
+    var d = 0; f.v.forEach(function (vi) { d += pv[vi].d; });
+    return { f: f, i: i, d: d / f.v.length };
+  });
+  faces.forEach(function (F) { if (F.f.decalOf !== undefined) F.d = faces[F.f.decalOf].d + 1e-6; });
+  faces.sort(function (a, b) { return a.d - b.d; });        /* far faces first */
+  var cols = themeColors(), light = [-0.35, -0.5, 0.8];
+  var ll = norm(light); light = scale(light, 1 / ll);
+  faces.forEach(function (F) {
+    var f = F.f, pts = f.v.map(function (vi) { return pv[vi].x + "," + pv[vi].y; }).join(" ");
+    var fill, stroke;
+    if (prim.shaded) {
+      var a = pv[f.v[0]], b = pv[f.v[1]], c = pv[f.v[2]];
+      var nrm = cross3([b.x - a.x, b.y - a.y, b.d - a.d], [c.x - a.x, c.y - a.y, c.d - a.d]);
+      var ln = norm(nrm), lam = ln < 1e-9 ? 0.5 : Math.abs(dot(nrm, light)) / ln;
+      var rgb = mixRGB(cols.bg, cols.accent, 0.2 + 0.5 * lam);
+      if (f.tone !== undefined) rgb = mixRGB(rgb, cols.fg, 1 - f.tone);
+      fill = rgbStr(rgb); stroke = rgbStr(cols.accent);
+    } else {
+      fill = rgbStr(mixRGB(cols.bg, cols.accent, 0.42)); stroke = fill;
+    }
+    el("polygon", { points: pts, fill: fill, stroke: stroke, "stroke-width": prim.shaded ? 1 : 0.8, "class": "mesh" }, ctx.svg);
+  });
+}
+function renderPrims(ctx, prims) {
+  var svg = ctx.svg;
+  prims.forEach(function (pr) {
+    var a, b;
+    switch (pr.t) {
+      case "polygon":
+        el("polygon", { points: ptsAttr(ctx, pr.pts), "class": pr.cls }, svg); break;
+      case "polyline":
+        el("polyline", { points: ptsAttr(ctx, pr.closed ? pr.pts.concat([pr.pts[0]]) : pr.pts), "class": pr.cls }, svg); break;
+      case "segment":
+        a = pxOf(ctx, pr.a); b = pxOf(ctx, pr.b);
+        el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": pr.cls }, svg); break;
+      case "point":
+        a = pxOf(ctx, pr.p);
+        el("circle", { cx: a[0], cy: a[1], r: pr.r || 2.3, "class": pr.cls }, svg); break;
+      case "arrow":
+        arrowPx(svg, pxOf(ctx, pr.pts[0]), pxOf(ctx, pr.pts[1]), pr.cls, pr.label, pr.sub, pr.side); break;
+      case "fig2d": {
+        /* a planar figure: the whole map (and, in 3D, the camera) is one 2x2 matrix */
+        var B = ctx.out === 3 ? matMul(ctx.Q.slice(0, 2), pr.M) : pr.M;
+        var g = el("g", { "class": "figgroup", transform: transformAttr(ctx.P, B) + " translate(" + pr.fo[0] + " " + pr.fo[1] + ")" }, svg);
+        g.innerHTML = FIGURE;
+        break;
+      }
+      case "circ2d": {
+        var gc = el("g", { transform: transformAttr(ctx.P, pr.M) }, svg);
+        el("circle", { cx: 0, cy: 0, r: 1, "class": "circ", "vector-effect": "non-scaling-stroke" }, gc);
+        break;
+      }
+      case "mesh": renderMesh(ctx, pr); break;
+      case "text":
+        a = pxOf(ctx, pr.p);
+        el("text", { x: a[0], y: a[1], "text-anchor": pr.anchor || "end", "class": pr.cls }, svg).textContent = pr.text; break;
+    }
+  });
+}
 function drawView(isDom) {
   var svg = isDom ? $("svgDom") : $("svgCod");
-  var P = makeP(isDom ? state.Wd : state.Wc);
+  var W = isDom ? state.Wd : state.Wc;
+  var nIn = state.n, out = isDom ? nIn : state.m;
+  var M = isDom ? ident(nIn) : state.A;
   svg.innerHTML = "";
-  drawGrid(svg, P);
-  if (!is2x2()) { note(svg, "Three-dimensional pictures are coming soon."); return; }
-  if (!isDom && !state.A) { note(svg, "Enter a matrix and press Map."); return; }
-  var M = isDom ? [[1, 0], [0, 1]] : state.A;
+  svg.classList.toggle("rot", out === 3 && (isDom || !!M));
+  var ctx = { svg: svg, P: makeP(W), Q: out === 3 ? camera() : null, out: out, W: W };
+  drawGridAxes(ctx);
+  if (!M) { note(svg, "Enter a matrix and press Map."); return; }
+  var prims = [], i;
+  var rank = rowBasis(M).length;
   var pre = isDom ? "" : "A";
-  var e1 = apply(M, [1, 0]), e2 = apply(M, [0, 1]);
-  var uu = apply(M, state.u), vv = apply(M, state.v);
-  var i, p, q;
+  var cols = ident(nIn).map(function (e) { return matVec(M, e); });          /* images of e_1..e_n */
+  var vnames = ["u", "v", "w"].slice(0, nIn);
+  var lv = vnames.map(function (k) { return matVec(M, vecVal(k)); });       /* images of u, v, w */
+  var famCls = ["uvec", "vvec", "wvec"];
 
-  if (state.show.basis) {
-    var c3 = [e1[0] + e2[0], e1[1] + e2[1]];
-    el("polygon", { points: [P.px(0, 0), P.px(e1[0], e1[1]), P.px(c3[0], c3[1]), P.px(e2[0], e2[1])].map(function (z) { return z.join(","); }).join(" "), "class": "usq" }, svg);
-  }
-  if (state.show.lattice) {
-    var c4 = [uu[0] + vv[0], uu[1] + vv[1]];
-    el("polygon", { points: [P.px(0, 0), P.px(uu[0], uu[1]), P.px(c4[0], c4[1]), P.px(vv[0], vv[1])].map(function (z) { return z.join(","); }).join(" "), "class": "uvsq" }, svg);
-  }
+  if (state.show.basis) prims = prims.concat(boxFaces(cols, "usq"));
+  if (state.show.lattice) prims = prims.concat(boxFaces(lv, "uvsq"));
+
   if (state.show.figure) {
-    var g = el("g", { "class": "figgroup", transform: transformAttr(P, M) + " translate(" + state.fo[0] + " " + state.fo[1] + ")" }, svg);
-    g.innerHTML = FIGURE;
+    if (nIn === 2) prims.push({ t: "fig2d", M: M, fo: state.fo });
+    else prims.push({ t: "mesh", verts: HOUSE.verts.map(function (p) { return matVec(M, p); }), faces: HOUSE.faces, shaded: out === 3 && rank === 3 });
   }
   if (state.show.circle) {
-    var gc = el("g", { transform: transformAttr(P, M) }, svg);
-    el("circle", { cx: 0, cy: 0, r: 1, "class": "circ", "vector-effect": "non-scaling-stroke" }, gc);
+    if (nIn === 2) {
+      if (out === 2) prims.push({ t: "circ2d", M: M });
+      else prims.push({ t: "polyline", pts: circlePts(64).map(function (p) { return matVec(M, p); }), cls: "circ", closed: true });
+    } else if (rank === 3) {
+      SPHERE.forEach(function (c) { prims.push({ t: "polyline", pts: c.map(function (p) { return matVec(M, p); }), cls: "sph", closed: true }); });
+    } else {
+      /* a flattened sphere: its image is the filled ellipse traced by the
+       * unit circle of the row space (a segment or point for lower rank) */
+      var rb = rowBasis(M), ep = [];
+      if (rank === 2) {
+        for (i = 0; i < 64; i++) { var t = i / 64 * 2 * Math.PI; ep.push(matVec(M, add(scale(rb[0], Math.cos(t)), scale(rb[1], Math.sin(t))))); }
+        prims.push({ t: "polygon", pts: ep, cls: "sphfill" });
+      } else if (rank === 1) {
+        prims.push({ t: "segment", a: matVec(M, rb[0]), b: matVec(M, scale(rb[0], -1)), cls: "circ" });
+      } else prims.push({ t: "point", p: matVec(M, [0, 0, 0]), cls: "latpt", r: 3 });
+    }
   }
   if (state.show.lattice) {
-    var L = latticeGeom(uu, vv, P.W);
-    for (i = 0; i < L.lines.length; i++) {
-      p = P.px(L.lines[i][0], L.lines[i][1]); q = P.px(L.lines[i][2], L.lines[i][3]);
-      el("line", { x1: p[0], y1: p[1], x2: q[0], y2: q[1], "class": "lat " + L.lines[i][4] }, svg);
+    if (nIn === 2 && out === 2) {
+      var L = latticeGeom(lv[0], lv[1], W);
+      L.lines.forEach(function (l) { prims.push({ t: "segment", a: [l[0], l[1]], b: [l[2], l[3]], cls: "lat " + l[4] }); });
+      L.points.forEach(function (p) { prims.push({ t: "point", p: p, cls: "latpt" }); });
+      if (L.tooFine) prims.push({ t: "text", p: ctx.P.math(VB - 8, VB - 8), text: "lattice too fine to draw", cls: "note" });
+    } else {
+      var B = latticeBlock(lv, nIn === 3 ? 2 : 4);
+      B.segments.forEach(function (sg) { prims.push({ t: "segment", a: sg.a, b: sg.b, cls: "lat l" + "uvw"[sg.fam] }); });
+      B.points.forEach(function (p) { prims.push({ t: "point", p: p, cls: "latpt", r: 2 }); });
     }
-    for (i = 0; i < L.points.length; i++) {
-      p = P.px(L.points[i][0], L.points[i][1]);
-      el("circle", { cx: p[0], cy: p[1], r: 2.3, "class": "latpt" }, svg);
-    }
-    if (L.tooFine) el("text", { x: VB - 8, y: VB - 8, "text-anchor": "end", "class": "note" }, svg).textContent = "lattice too fine to draw";
   }
-  if (state.show.basis) {
-    arrow(svg, P, e1[0], e1[1], "basis", pre + "e", "1", -1);
-    arrow(svg, P, e2[0], e2[1], "basis", pre + "e", "2", -1);
-  }
-  if (state.show.lattice) {
-    arrow(svg, P, uu[0], uu[1], "uvec", pre + "u", null, 1);
-    arrow(svg, P, vv[0], vv[1], "vvec", pre + "v", null, 1);
-    if (isDom) {   /* invisible handles so the cursor shows the tips are draggable */
-      p = P.px(uu[0], uu[1]); el("circle", { cx: p[0], cy: p[1], r: 12, "class": "hit" }, svg);
-      q = P.px(vv[0], vv[1]); el("circle", { cx: q[0], cy: q[1], r: 12, "class": "hit" }, svg);
-    }
+  var origin = cols[0].map(function () { return 0; });
+  if (state.show.basis) cols.forEach(function (c, j) { prims.push({ t: "arrow", pts: [origin, c], cls: "basis", label: pre + "e", sub: String(j + 1), side: -1 }); });
+  if (state.show.lattice) lv.forEach(function (c, j) { prims.push({ t: "arrow", pts: [origin, c], cls: famCls[j], label: pre + vnames[j], side: 1 }); });
+  renderPrims(ctx, prims);
+  if (isDom && out === 2 && state.show.lattice) {   /* invisible handles: the cursor shows the tips drag */
+    lv.forEach(function (c) { var p = ctx.P.px(c[0], c[1]); el("circle", { cx: p[0], cy: p[1], r: 12, "class": "hit" }, svg); });
   }
 }
 function drawAll() {
   drawView(true);
   drawView(false);
   $("latticeTools").hidden = !state.show.lattice;
-  kt($("uvRead"), "u = (" + fmt(state.u[0]) + ",\\, " + fmt(state.u[1]) + "),\\quad v = (" + fmt(state.v[0]) + ",\\, " + fmt(state.v[1]) + ")");
+  refreshVecTex();
 }
 
-/* ===================== dragging u, v, and the figure ===================== */
-var drag = null;        /* "u", "v", or "fig" */
-var dragStart = null;   /* for the figure: {at: math point, fo: offset} */
+/* ===================== pointer: drag vectors / figure (2D), orbit (3D), wheel zoom ===================== */
+var drag = null;
 function clientToVB(svg, ev) {
   var r = svg.getBoundingClientRect();
   return [(ev.clientX - r.left) * VB / r.width, (ev.clientY - r.top) * VB / r.height];
 }
-function setupDrag() {
-  var svg = $("svgDom");
-  svg.addEventListener("pointerdown", function (ev) {
-    if (!is2x2()) return;
-    var P = makeP(state.Wd), pt = clientToVB(svg, ev), best = null, bd = 18;
-    if (state.show.lattice) {
-      ["u", "v"].forEach(function (k) {
-        var t = P.px(state[k][0], state[k][1]), d = Math.hypot(t[0] - pt[0], t[1] - pt[1]);
-        if (d < bd) { bd = d; best = k; }
-      });
+function clampW(w) { return Math.max(WMIN, Math.min(WMAX, w)); }
+function setupPointer() {
+  [["svgDom", true], ["svgCod", false]].forEach(function (pair) {
+    var svg = $(pair[0]), isDom = pair[1];
+    svg.addEventListener("pointerdown", function (ev) {
+      var out = isDom ? state.n : state.m, pt = clientToVB(svg, ev);
+      if (out === 3) {
+        if (!isDom && !state.A) return;
+        drag = { kind: "cam", svg: svg, last: pt };
+      } else if (isDom && state.n === 2) {
+        var P = makeP(state.Wd), best = null, bd = 18;
+        if (state.show.lattice) {
+          ["u", "v"].forEach(function (k) {
+            var c = vecVal(k), t = P.px(c[0], c[1]), d = Math.hypot(t[0] - pt[0], t[1] - pt[1]);
+            if (d < bd) { bd = d; best = k; }
+          });
+        }
+        if (best) drag = { kind: best, svg: svg };
+        else if (state.show.figure && ev.target.closest && ev.target.closest(".figgroup"))
+          drag = { kind: "fig", svg: svg, at: P.math(pt[0], pt[1]), fo: state.fo.slice() };
+        else return;
+      } else return;
+      svg.setPointerCapture(ev.pointerId);
+      svg.classList.add("dragging");
+      ev.preventDefault();
+    });
+    svg.addEventListener("pointermove", function (ev) {
+      if (!drag || drag.svg !== svg) return;
+      var pt = clientToVB(svg, ev);
+      if (drag.kind === "cam") {
+        state.cam.yaw += (pt[0] - drag.last[0]) * 0.008;
+        state.cam.phi = Math.max(-1.55, Math.min(1.55, state.cam.phi + (pt[1] - drag.last[1]) * 0.008));
+        drag.last = pt;
+        drawAll(); updateHashSoon();
+        return;
+      }
+      var P = makeP(state.Wd), m = P.math(pt[0], pt[1]);
+      if (drag.kind === "fig") {
+        state.fo = [drag.fo[0] + m[0] - drag.at[0], drag.fo[1] + m[1] - drag.at[1]];
+        drawAll(); updateHashSoon();
+        return;
+      }
+      /* free movement by default; Shift snaps to half-units */
+      var snap = ev.shiftKey ? 2 : 100;
+      var x = Math.round(m[0] * snap) / snap, y = Math.round(m[1] * snap) / snap;
+      x = Math.max(-P.W, Math.min(P.W, x)); y = Math.max(-P.W, Math.min(P.W, y));
+      var cur = vecVal(drag.kind);
+      if (x === cur[0] && y === cur[1]) return;
+      state.vec[drag.kind] = [fmt(x), fmt(y), state.vec[drag.kind][2]];
+      drawAll(); updateHashSoon();
+    });
+    function end(ev) {
+      if (!drag || drag.svg !== svg) return;
+      drag = null;
+      svg.classList.remove("dragging");
+      try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
+      updateHash();
     }
-    if (!best && state.show.figure && ev.target.closest && ev.target.closest(".figgroup")) {
-      best = "fig";
-      dragStart = { at: P.math(pt[0], pt[1]), fo: state.fo.slice() };
-    }
-    if (!best) return;
-    drag = best;
-    svg.setPointerCapture(ev.pointerId);
-    svg.classList.add("dragging");
-    ev.preventDefault();
+    svg.addEventListener("pointerup", end);
+    svg.addEventListener("pointercancel", end);
+    svg.addEventListener("wheel", function (ev) {
+      ev.preventDefault();
+      var dy = ev.deltaY * (ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? 100 : 1);
+      var f = Math.exp((ev.ctrlKey ? 0.01 : 0.0015) * dy);   /* trackpad pinch arrives as ctrl+wheel */
+      var key = isDom ? "Wd" : "Wc";
+      state[key] = clampW(state[key] * f);
+      drawAll(); updateHashSoon();
+    }, { passive: false });
   });
-  svg.addEventListener("pointermove", function (ev) {
-    if (!drag) return;
-    var P = makeP(state.Wd), pt = clientToVB(svg, ev), m = P.math(pt[0], pt[1]);
-    if (drag === "fig") {
-      state.fo = [dragStart.fo[0] + m[0] - dragStart.at[0], dragStart.fo[1] + m[1] - dragStart.at[1]];
-      drawAll();
-      return;
-    }
-    /* free movement by default; Shift snaps to half-units */
-    var snap = ev.shiftKey ? 2 : 100;
-    var x = Math.round(m[0] * snap) / snap, y = Math.round(m[1] * snap) / snap;
-    x = Math.max(-P.W, Math.min(P.W, x)); y = Math.max(-P.W, Math.min(P.W, y));
-    if (x === state[drag][0] && y === state[drag][1]) return;
-    state[drag] = [x, y];
-    drawAll();
-  });
-  function end(ev) {
-    if (!drag) return;
-    drag = null; dragStart = null;
-    svg.classList.remove("dragging");
-    try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
-    updateHash();
-  }
-  svg.addEventListener("pointerup", end);
-  svg.addEventListener("pointercancel", end);
 }
 
 /* ===================== share link (URL hash) ===================== */
 function b64url(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function unb64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return decodeURIComponent(escape(atob(s))); }
-var lastHash = "";
+function r3(x) { return Math.round(x * 1000) / 1000; }
+var hashTimer = null;
 function updateHash() {
+  if (hashTimer) { clearTimeout(hashTimer); hashTimer = null; }
   var sh = state.show;
-  var o = { v: 1, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0, uv: [state.u, state.v], f: state.fo.map(function (x) { return Math.round(x * 100) / 100; }),
-            s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid].map(Number), w: [state.Wd, state.Wc] };
-  lastHash = "#" + b64url(JSON.stringify(o));
-  try { history.replaceState(null, "", lastHash); } catch (e) {}
+  var o = { v: 2, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0,
+            vec: [state.vec.u, state.vec.v, state.vec.w], f: state.fo.map(r3),
+            s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid].map(Number),
+            w: [r3(state.Wd), r3(state.Wc)], cam: [r3(state.cam.yaw), r3(state.cam.phi)] };
+  try { history.replaceState(null, "", "#" + b64url(JSON.stringify(o))); } catch (e) {}
+}
+/* continuous interactions (drag, wheel) update the link a little later */
+function updateHashSoon() {
+  if (hashTimer) clearTimeout(hashTimer);
+  hashTimer = setTimeout(updateHash, 300);
 }
 function loadHash() {
   var h = window.location.hash;
   if (!h || h.length < 2) return false;
   try {
     var o = JSON.parse(unb64url(h.slice(1)));
-    if (o.v !== 1) return false;
+    if (o.v !== 1 && o.v !== 2) return false;
     var m = Number(o.m), n = Number(o.n);
     if (!(m === 2 || m === 3) || !(n === 2 || n === 3)) return false;
     state.m = m; state.n = n;
     state.entries = zeroEntries(m, n);
     if (Array.isArray(o.e)) for (var r = 0; r < m; r++) for (var j = 0; j < n; j++)
       if (o.e[r] && typeof o.e[r][j] === "string") state.entries[r][j] = o.e[r][j];
-    if (o.uv && o.uv.length === 2) {
+    if (o.v === 1 && o.uv && o.uv.length === 2) {
       ["u", "v"].forEach(function (k, i) {
         var w = o.uv[i];
-        if (Array.isArray(w) && w.length === 2 && isFinite(w[0]) && isFinite(w[1])) state[k] = [Number(w[0]), Number(w[1])];
+        if (Array.isArray(w) && w.length === 2 && isFinite(w[0]) && isFinite(w[1])) state.vec[k] = [fmt(Number(w[0])), fmt(Number(w[1])), state.vec[k][2]];
+      });
+    }
+    if (o.v === 2 && Array.isArray(o.vec)) {
+      ["u", "v", "w"].forEach(function (k, i) {
+        var w = o.vec[i];
+        if (Array.isArray(w) && w.length === 3 && w.every(function (x) { return typeof x === "string" && parseEntry(x); })) state.vec[k] = w.slice();
       });
     }
     if (Array.isArray(o.f) && o.f.length === 2 && isFinite(o.f[0]) && isFinite(o.f[1])) state.fo = [Number(o.f[0]), Number(o.f[1])];
@@ -1056,8 +1380,11 @@ function loadHash() {
       ["figure", "circle", "lattice", "basis", "grid"].forEach(function (k, i) { state.show[k] = !!o.s[i]; });
     }
     if (Array.isArray(o.w)) {
-      if (ZOOMS.indexOf(Number(o.w[0])) >= 0) state.Wd = Number(o.w[0]);
-      if (ZOOMS.indexOf(Number(o.w[1])) >= 0) state.Wc = Number(o.w[1]);
+      if (isFinite(o.w[0])) state.Wd = clampW(Number(o.w[0]));
+      if (isFinite(o.w[1])) state.Wc = clampW(Number(o.w[1]));
+    }
+    if (Array.isArray(o.cam) && isFinite(o.cam[0]) && isFinite(o.cam[1])) {
+      state.cam = { yaw: Number(o.cam[0]), phi: Math.max(-1.55, Math.min(1.55, Number(o.cam[1]))) };
     }
     return { mapped: o.p === 1 };
   } catch (e) { return false; }
@@ -1077,9 +1404,9 @@ function init() {
     var next = effective() === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     try { localStorage.setItem("hwg-theme", next); } catch (e) {}
-    icon();
+    icon(); themeCols = null; drawAll();
   });
-  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", icon);
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { icon(); themeCols = null; drawAll(); });
   icon();
 
   /* dimensions */
@@ -1087,13 +1414,14 @@ function init() {
   $("selM").addEventListener("change", dimChange);
   $("selN").addEventListener("change", dimChange);
 
-  /* matrix buttons */
+  /* matrix buttons; clicking the typeset matrix reopens the editor */
   $("mapBtn").addEventListener("click", doMap);
   $("editBtn").addEventListener("click", doEdit);
+  $("matTex").addEventListener("click", doEdit);
   $("clearBtn").addEventListener("click", function () {
     setEntries(zeroEntries(state.m, state.n));
     $("editMsg").textContent = "";
-    var first = document.querySelector("input.cell");
+    var first = document.querySelector("#grid input.cell");
     if (first) first.focus();
     updateHash();
   });
@@ -1113,26 +1441,23 @@ function init() {
   /* options */
   [["chkFigure", "figure"], ["chkCircle", "circle"], ["chkLattice", "lattice"], ["chkBasis", "basis"], ["chkGrid", "grid"]].forEach(function (pair) {
     var box = $(pair[0]);
-    box.checked = state.show[pair[1]];
     box.addEventListener("change", function () { state.show[pair[1]] = box.checked; drawAll(); updateHash(); });
   });
-  $("resetUV").addEventListener("click", function () { state.u = [1, 0]; state.v = [0, 1]; drawAll(); updateHash(); });
+  $("resetUV").addEventListener("click", function () {
+    state.vec = { u: VEC_DEFAULT.u.slice(), v: VEC_DEFAULT.v.slice(), w: VEC_DEFAULT.w.slice() };
+    drawAll(); updateHash();
+  });
 
-  /* zoom */
+  /* zoom buttons (the wheel zooms too) */
   document.querySelectorAll(".zoom button").forEach(function (b) {
     b.addEventListener("click", function () {
       var key = this.dataset.view === "d" ? "Wd" : "Wc";
-      var i = ZOOMS.indexOf(state[key]) + Number(this.dataset.dir);
-      if (i < 0 || i >= ZOOMS.length) return;
-      state[key] = ZOOMS[i];
-      if (key === "Wd") { /* keep u and v inside the window */
-        ["u", "v"].forEach(function (k) { state[k] = state[k].map(function (x) { return Math.max(-state.Wd, Math.min(state.Wd, x)); }); });
-      }
+      state[key] = clampW(state[key] * (Number(this.dataset.dir) > 0 ? 1.25 : 0.8));
       drawAll(); updateHash();
     });
   });
 
-  setupDrag();
+  setupPointer();
 
   /* restore a shared link, or start fresh */
   var loaded = loadHash();

@@ -8,8 +8,8 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
 
 ## Features
 
-- Choose the matrix size m × n (2 or 3 each). The 2 × 2 case is complete;
-  3-dimensional pictures are planned.
+- Choose the matrix size m × n (2 or 3 each). All four cases work: the
+  domain and codomain are drawn in 2D or 3D as their dimension requires.
 - Matrix entry follows the Row Reducer conventions: a default `0` clears
   when you click into it, arrow keys move between cells, Enter maps.
   Entries can be integers, fractions (`1/2`), decimals, or small
@@ -18,12 +18,20 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
 - Example buttons fill in a fresh rotation, dilation, reflection, shear,
   projection onto a line, or random integer matrix, with a one-line
   description of the map.
-- Domain and codomain side by side. Toggles: a figure, the unit circle,
-  a lattice spanned by two draggable vectors *u* and *v* (their ℤ²-span,
-  with lines colored by direction), the standard basis with the unit
-  square, and the background grid. Each view has zoom buttons.
-- Drag the tips of *u* and *v* in the domain (snaps to half-units; hold
-  Shift for free movement). Singular maps collapse the lattice to a line.
+- Domain and codomain side by side. Toggles: a figure (a running figure
+  in 2D, a small house in 3D), the unit circle or sphere, a lattice spanned
+  by *u*, *v* (and *w* in 3D) with the fundamental parallelogram or
+  parallelepiped shaded and lines colored by direction, the standard basis
+  with the unit square or cube, and the background grid.
+- In 2D, drag the tips of *u* and *v* (hold Shift to snap to half-units)
+  and drag the figure around; the codomain follows live. The vectors can
+  also be typed: click their typeset form, edit, press Enter. Clicking the
+  typeset matrix reopens the matrix editor.
+- 3D views share an orbit camera: drag to rotate. Every view zooms with
+  the scroll wheel or trackpad (and the +/− buttons).
+- Maps that flatten space (a 3 × 2 matrix, or a singular 3 × 3 one) draw the
+  figure as a flat silhouette and the sphere as the filled ellipse it maps
+  onto. Singular 2 × 2 maps collapse the lattice to a line.
 - The URL hash encodes the whole state (matrix, toggles, vectors, zoom),
   so **Copy link** reproduces a picture.
 
@@ -34,13 +42,16 @@ external resource), deployed to GitHub Pages with no build step.
 
 - Entries parse to a tiny AST (`parseExpr`) that yields both a float
   (for drawing) and LaTeX (for display).
-- Figures and circles are drawn in math coordinates inside an SVG `<g>`
-  whose `transform` is the matrix composed with the pixel scaling, with
-  `vector-effect="non-scaling-stroke"` so outlines stay crisp. The
-  lattice, arrows, and unit square are computed explicitly so they can be
-  clipped to the window and keep fixed-size arrowheads.
-- To change the default figure, edit the `FIGURE` string (SVG markup in
-  math coordinates, y up).
+- Each view builds a list of primitives in the output space (polygons,
+  polylines, arrows, a planar figure, a mesh) and hands it to a renderer:
+  2D draws directly, 3D projects through an orthographic orbit camera.
+  The planar figure is SVG markup drawn inside a `<g>` whose `transform`
+  is the whole map (matrix, and in 3D the camera too) composed with the
+  pixel scaling, so curves stay exact; the 3D figure is a polygon mesh
+  drawn back to front with flat shading from the theme colours.
+- The 2D figure is the `FIGURE` string (SVG markup in math coordinates,
+  y up), traced from `guy.png` into `guy.svg`; the 3D figure is the
+  `HOUSE` mesh (vertices and faces).
 - Theme, fonts, and flat card styling come from hwGenie's `slate` theme;
   the light/dark toggle shares the `hwg-theme` localStorage key with the
   course sites.
