@@ -132,7 +132,7 @@ a { color: var(--accent); }
 }
 header.doc h1 { font-size: 1.7rem; line-height: 1.25; margin: 0; font-weight: 700; }
 
-.panel { background: var(--card-bg); padding: .8rem 1.2rem .9rem; margin: .9rem 0; }
+.panel { background: var(--card-bg); padding: .7rem 1.2rem .75rem; margin: .9rem 0; }
 .cardhead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; }
 .cardhead button.filebox { padding: .3rem .55rem; }
 .cardhead .card-title { margin: 0; }
@@ -148,7 +148,8 @@ header.doc h1 { font-size: 1.7rem; line-height: 1.25; margin: 0; font-weight: 70
   margin: 0 0 .8rem;
 }
 p.hint, .hint { font-family: var(--font-ui); font-size: .85rem; color: var(--muted); margin: .2rem 0 .9rem; }
-.msg { color: var(--alert); font-family: var(--font-ui); font-size: .8rem; min-height: 1.2em; margin: .5rem 0 0; }
+.msg { color: var(--alert); font-family: var(--font-ui); font-size: .8rem; margin: .3rem 0 0; }
+.msg:empty { display: none; }
 
 button.filebox {
   display: inline-flex;
@@ -194,7 +195,7 @@ label.fld.chk { cursor: pointer; color: var(--fg); }
 /* --- matrix panel: entry on the left, example maps on the right --- */
 .controls { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr); gap: .8rem; margin: .9rem 0; align-items: stretch; }
 @media (max-width: 58rem) { .controls { grid-template-columns: 1fr; } }
-.controls .panel { margin: 0; display: flex; flex-direction: column; gap: .55rem; }
+.controls .panel { margin: 0; display: flex; flex-direction: column; gap: .45rem; }
 .controls .btnrow { margin: 0; gap: .45rem; }
 .matentry .hint { margin: 0; }
 .optrow { gap: .35rem 1rem; }
@@ -204,26 +205,26 @@ label.fld.chk { cursor: pointer; color: var(--fg); }
   justify-content: safe center;
   align-items: stretch;
   overflow-x: auto;
-  padding: .3rem 0 .4rem;
+  padding: .1rem 0 .15rem;
 }
 .bracket { flex: 0 0 .5rem; border: 2px solid var(--fg); }
 .bracket.bl { border-right: none; margin-right: .25rem; }
 .bracket.br { border-left: none; margin-left: .25rem; }
-#grid { display: grid; row-gap: .35rem; column-gap: .5rem; align-content: center; padding: .45rem 0; }
+#grid { display: grid; row-gap: .3rem; column-gap: .5rem; align-content: center; padding: .3rem 0; }
 input.cell {
   font-family: var(--font-mono);
   font-size: .95rem;
   text-align: center;
   width: 100%;
   min-width: 3.2rem;
-  padding: .38rem .2rem;
+  padding: .3rem .2rem;
   background: var(--bg);
   color: var(--fg);
   border: 1px solid var(--border);
 }
 input.cell:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 input.cell.bad { outline: 2px solid var(--alert); outline-offset: -1px; }
-.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .35rem 0 .2rem; }
+.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .15rem 0 0; }
 
 /* --- the two planes --- */
 .views { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin: .9rem 0; }
