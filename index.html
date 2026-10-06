@@ -133,7 +133,8 @@ a { color: var(--accent); }
 header.doc h1 { font-size: 1.7rem; line-height: 1.25; margin: 0; font-weight: 700; }
 
 .panel { background: var(--card-bg); padding: .8rem 1.2rem .9rem; margin: .9rem 0; }
-.cardhead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.1rem; }
+.cardhead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; }
+.cardhead button.filebox { padding: .3rem .55rem; }
 .cardhead .card-title { margin: 0; }
 .cardhead .btnrow { margin: 0; margin-left: auto; }
 .cardhead .btnrow[hidden] { display: none; }
@@ -174,7 +175,7 @@ select {
   background: var(--bg);
   color: var(--fg);
   border: 1px solid var(--border);
-  padding: .3rem .3rem;
+  padding: .25rem .15rem;
 }
 select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 label.fld {
@@ -187,14 +188,16 @@ label.fld {
 }
 label.fld input[type="checkbox"] { accent-color: var(--accent); margin: 0; width: .95rem; height: .95rem; }
 label.fld.chk { cursor: pointer; color: var(--fg); }
-.setuprow { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: 0; }
+.setuprow { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: 0; }
 .setuprow .hint { margin: 0; }
 
 /* --- matrix panel: entry on the left, example maps on the right --- */
-.matcols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: .4rem 1.4rem; align-items: start; margin-top: .3rem; }
+.controls { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr); gap: .8rem; margin: .9rem 0; align-items: stretch; }
+@media (max-width: 58rem) { .controls { grid-template-columns: 1fr; } }
+.controls .panel { margin: 0; display: flex; flex-direction: column; gap: .55rem; }
+.controls .btnrow { margin: 0; gap: .45rem; }
 .matentry .hint { margin: 0; }
-.examples { padding-top: .35rem; }
-.examples .btnrow { margin: 0; gap: .45rem; }
+.optrow { gap: .35rem 1rem; }
 @media (max-width: 46rem) { .matcols { grid-template-columns: 1fr; } }
 .matwrap {
   display: flex;
@@ -220,12 +223,10 @@ input.cell {
 }
 input.cell:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 input.cell.bad { outline: 2px solid var(--alert); outline-offset: -1px; }
-.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .5rem 0 .3rem; }
-#presetNote { min-height: 1.4em; margin: .45rem 0 0; }
-#presetNote .katex { font-size: 1em; }
+.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .35rem 0 .2rem; }
 
 /* --- the two planes --- */
-.views { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin: .9rem 0; }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin: .9rem 0; }
 @media (max-width: 46rem) { .views { grid-template-columns: 1fr; } }
 .view { background: var(--card-bg); padding: .9rem 1rem 1rem; }
 .viewhead { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .55rem; }
@@ -273,8 +274,7 @@ svg.plane.dragging { cursor: grabbing; }
 .swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; vertical-align: -1px; }
 .swatch.u { background: var(--uvec); }
 .swatch.v { background: var(--vvec); }
-#latticeTools { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; align-items: center; margin-top: .55rem; }
-#latticeTools .hint { margin: 0; }
+#latticeTools { display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: center; }
 #latticeTools[hidden] { display: none; }
 #uvRead { font-size: 1rem; }
 
@@ -296,26 +296,25 @@ footer.doc {
 </div>
 <main>
 
-  <!-- ============ matrix ============ -->
-  <section class="panel" id="matpanel">
-    <div class="cardhead">
-      <p class="card-title">Matrix</p>
-      <div class="setuprow">
-        <label class="fld">m <select id="selM" aria-label="Number of rows m"><option>2</option><option>3</option></select></label>
-        <span>&times;</span>
-        <label class="fld">n <select id="selN" aria-label="Number of columns n"><option>2</option><option>3</option></select></label>
-        <span class="hint" id="dimNote"></span>
+  <!-- ============ controls: matrix, examples, show ============ -->
+  <section class="controls">
+    <div class="panel" id="matpanel">
+      <div class="cardhead">
+        <p class="card-title">Matrix</p>
+        <div class="setuprow">
+          <label class="fld">m <select id="selM" aria-label="Number of rows m"><option>2</option><option>3</option></select></label>
+          <span>&times;</span>
+          <label class="fld">n <select id="selN" aria-label="Number of columns n"><option>2</option><option>3</option></select></label>
+        </div>
+        <div class="btnrow" id="editBtns">
+          <button class="filebox" id="mapBtn">Map &rarr;</button>
+          <button class="filebox" id="clearBtn">Clear</button>
+        </div>
+        <div class="btnrow" id="mapBtns" hidden>
+          <button class="filebox" id="editBtn">&larr; Edit</button>
+          <button class="filebox" id="copyLink">Copy link</button>
+        </div>
       </div>
-      <div class="btnrow" id="editBtns">
-        <button class="filebox" id="mapBtn">Map &rarr;</button>
-        <button class="filebox" id="clearBtn">Clear</button>
-      </div>
-      <div class="btnrow" id="mapBtns" hidden>
-        <button class="filebox" id="editBtn">&larr; Edit matrix</button>
-        <button class="filebox" id="copyLink">Copy link</button>
-      </div>
-    </div>
-    <div class="matcols">
       <div class="matentry">
         <div id="editBox">
           <div class="matwrap">
@@ -323,34 +322,29 @@ footer.doc {
             <div id="grid"></div>
             <div class="bracket br" aria-hidden="true"></div>
           </div>
-          <p class="hint">Entries: integers (<code>-3</code>), fractions (<code>1/2</code>), decimals, or expressions like <code>sqrt(3)/2</code>. Enter maps.</p>
+          <p class="hint">Entries like <code>-3</code>, <code>1/2</code>, <code>0.25</code>, or <code>sqrt(3)/2</code>.</p>
         </div>
         <div id="mapBox" hidden>
           <div id="matTex" class="texmat"></div>
         </div>
         <p class="msg" id="editMsg"></p>
       </div>
-      <div class="examples">
-        <div class="cardhead">
-          <p class="card-title">Examples</p>
-          <div class="btnrow" style="margin-left:0">
-            <button class="filebox" data-preset="rotation">Rotation</button>
-            <button class="filebox" data-preset="dilation">Dilation</button>
-            <button class="filebox" data-preset="reflection">Reflection</button>
-            <button class="filebox" data-preset="shear">Shear</button>
-            <button class="filebox" data-preset="projection">Projection</button>
-            <button class="filebox" data-preset="random">Random</button>
-          </div>
-        </div>
-        <div id="presetNote" class="hint" aria-live="polite"></div>
+    </div>
+
+    <div class="panel" id="examples">
+      <p class="card-title" style="margin:0">Examples</p>
+      <div class="btnrow">
+        <button class="filebox" data-preset="rotation">Rotation</button>
+        <button class="filebox" data-preset="dilation">Dilation</button>
+        <button class="filebox" data-preset="reflection">Reflection</button>
+        <button class="filebox" data-preset="shear">Shear</button>
+        <button class="filebox" data-preset="projection">Projection</button>
+        <button class="filebox" data-preset="random">Random</button>
       </div>
     </div>
-  </section>
 
-  <!-- ============ options ============ -->
-  <section class="panel" id="options">
-    <div class="cardhead">
-      <p class="card-title">Show</p>
+    <div class="panel" id="options">
+      <p class="card-title" style="margin:0">Show</p>
       <div class="optrow">
         <label class="fld chk"><input type="checkbox" id="chkFigure" checked> Figure</label>
         <label class="fld chk"><input type="checkbox" id="chkCircle"> Unit circle</label>
@@ -358,11 +352,10 @@ footer.doc {
         <label class="fld chk"><input type="checkbox" id="chkBasis"> Standard basis</label>
         <label class="fld chk"><input type="checkbox" id="chkGrid" checked> Grid</label>
       </div>
-    </div>
-    <div id="latticeTools" hidden>
-      <span id="uvRead"></span>
-      <button class="filebox" id="resetUV">Reset <i>u</i>, <i>v</i></button>
-      <span class="hint">Drag the tips of <i>u</i> and <i>v</i> in the domain (hold Shift to snap to half-units). The figure can be dragged too.</span>
+      <div id="latticeTools" hidden>
+        <span id="uvRead"></span>
+        <button class="filebox" id="resetUV">Reset <i>u</i>, <i>v</i></button>
+      </div>
     </div>
   </section>
 
@@ -608,7 +601,6 @@ function buildGrid() {
       inp.addEventListener("input", function () {
         this.classList.remove("bad");
         $("editMsg").textContent = "";
-        $("presetNote").textContent = "";
         state.entries[Number(this.dataset.r)][Number(this.dataset.c)] = this.value;
       });
       inp.addEventListener("keydown", cellKeydown);
@@ -698,12 +690,10 @@ function setDims(m, n) {
   $("selM").value = String(m); $("selN").value = String(n);
   resizeEntries(m, n);
   state.A = null; state.Atex = null;
-  $("presetNote").textContent = "";
   $("mapBox").hidden = true; $("mapBtns").hidden = true;
   $("editBox").hidden = false; $("editBtns").hidden = false;
   buildGrid();
   var sup = { 2: "²", 3: "³" };
-  $("dimNote").innerHTML = "<i>T</i>(<i>x</i>) = <i>Ax</i> maps ℝ" + sup[n] + " → ℝ" + sup[m];
   $("domTitle").textContent = "Domain ℝ" + sup[n];
   $("codTitle").textContent = "Codomain ℝ" + sup[m];
   document.querySelectorAll("[data-preset]").forEach(function (b) { b.disabled = !is2x2(); });
@@ -776,7 +766,7 @@ function preset(kind) {
   }
   setEntries(E);
   doMap();
-  kt($("presetNote"), note);
+  void note;   /* description kept for a possible future tooltip */
 }
 
 /* ===================== geometry helpers ===================== */
@@ -1101,7 +1091,6 @@ function init() {
   $("editBtn").addEventListener("click", doEdit);
   $("clearBtn").addEventListener("click", function () {
     setEntries(zeroEntries(state.m, state.n));
-    $("presetNote").textContent = "";
     $("editMsg").textContent = "";
     var first = document.querySelector("input.cell");
     if (first) first.focus();
