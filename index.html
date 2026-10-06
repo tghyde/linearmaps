@@ -23,8 +23,8 @@
   --sol-accent: #2c6a3f;
   --code-bg: #f1f0ea;
   --hover-bg: #e2e8f3;
-  --uvec: #d97706;
-  --vvec: #7c3aed;
+  --uvec: #c0392b;
+  --vvec: #2b64c4;
   --font-body: Charter, "Bitstream Charter", Georgia, "Times New Roman", serif;
   --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -42,8 +42,8 @@
     --sol-accent: #98cda5;
     --code-bg: #22252d;
     --hover-bg: #2b3242;
-    --uvec: #fbbf24;
-    --vvec: #b197fb;
+    --uvec: #e5756a;
+    --vvec: #7ea6ef;
   }
 }
 :root[data-theme="dark"] {
@@ -58,8 +58,8 @@
   --sol-accent: #98cda5;
   --code-bg: #22252d;
   --hover-bg: #2b3242;
-  --uvec: #fbbf24;
-  --vvec: #b197fb;
+  --uvec: #e5756a;
+  --vvec: #7ea6ef;
 }
 
 * { box-sizing: border-box; }
@@ -74,7 +74,7 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   body { transition: background-color .2s ease, color .2s ease; }
 }
-main { max-width: 62rem; margin: 0 auto; padding: 1.25rem 1.1rem 4rem; }
+main { max-width: 62rem; margin: 0 auto; padding: .2rem 1.1rem 4rem; }
 a { color: var(--accent); }
 
 #themetoggle {
@@ -109,11 +109,34 @@ a { color: var(--accent); }
 }
 #courselink:hover { background: var(--accent); color: var(--bg); }
 
-header.doc { text-align: center; margin: 1rem 0 1.5rem; }
-header.doc h1 { font-size: 1.6rem; margin: 0; font-weight: 700; }
-p.tagline { color: var(--muted); font-size: .95rem; margin: .4rem 0 0; }
+/* Hero banner, as on the hwGenie course page: the title floats in a
+   borderless card over the banner art. */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 62rem;
+  margin: 0 auto;
+  min-height: 11rem;
+  padding: 2.5rem 1.1rem;
+}
+.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero header.doc {
+  position: relative;
+  text-align: center;
+  margin: 0;
+  max-width: min(100%, 38rem);
+  padding: 1.2rem 2rem;
+  background: var(--card-bg);
+}
+header.doc h1 { font-size: 1.7rem; line-height: 1.25; margin: 0; font-weight: 700; }
 
-.panel { background: var(--card-bg); padding: 1.15rem 1.35rem; margin: 1.1rem 0; }
+.panel { background: var(--card-bg); padding: .8rem 1.2rem .9rem; margin: .9rem 0; }
+.cardhead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.1rem; }
+.cardhead .card-title { margin: 0; }
+.cardhead .btnrow { margin: 0; margin-left: auto; }
+.cardhead .btnrow[hidden] { display: none; }
 .card-title {
   font-family: var(--font-ui);
   font-size: .78rem;
@@ -164,18 +187,21 @@ label.fld {
 }
 label.fld input[type="checkbox"] { accent-color: var(--accent); margin: 0; width: .95rem; height: .95rem; }
 label.fld.chk { cursor: pointer; color: var(--fg); }
-.setuprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin: .2rem 0 .6rem; }
+.setuprow { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: 0; }
 .setuprow .hint { margin: 0; }
 
 /* --- matrix panel: entry on the left, example maps on the right --- */
-.matcols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
+.matcols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: .4rem 1.4rem; align-items: start; margin-top: .3rem; }
+.matentry .hint { margin: 0; }
+.examples { padding-top: .35rem; }
+.examples .btnrow { margin: 0; gap: .45rem; }
 @media (max-width: 46rem) { .matcols { grid-template-columns: 1fr; } }
 .matwrap {
   display: flex;
   justify-content: safe center;
   align-items: stretch;
   overflow-x: auto;
-  padding: .6rem 0 .8rem;
+  padding: .3rem 0 .4rem;
 }
 .bracket { flex: 0 0 .5rem; border: 2px solid var(--fg); }
 .bracket.bl { border-right: none; margin-right: .25rem; }
@@ -194,12 +220,12 @@ input.cell {
 }
 input.cell:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 input.cell.bad { outline: 2px solid var(--alert); outline-offset: -1px; }
-.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .6rem 0 .4rem; }
-#presetNote { min-height: 1.4em; margin: .8rem 0 0; }
+.texmat { font-size: 1.25rem; text-align: center; overflow-x: auto; padding: .5rem 0 .3rem; }
+#presetNote { min-height: 1.4em; margin: .45rem 0 0; }
 #presetNote .katex { font-size: 1em; }
 
 /* --- the two planes --- */
-.views { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin: 1.1rem 0; }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin: .9rem 0; }
 @media (max-width: 46rem) { .views { grid-template-columns: 1fr; } }
 .view { background: var(--card-bg); padding: .9rem 1rem 1rem; }
 .viewhead { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .55rem; }
@@ -236,7 +262,9 @@ svg.plane.dragging { cursor: grabbing; }
 .plane .shaft { fill: none; stroke-width: 2; stroke-linecap: round; }
 .plane .basis.shaft { stroke-width: 1.6; }
 .plane .head { stroke: none; }
-.plane .tip { cursor: grab; stroke: var(--bg); stroke-width: 1.5; }
+.plane .hit { cursor: grab; fill: transparent; stroke: none; pointer-events: all; }
+.plane .uvsq { fill: var(--vvec); fill: color-mix(in srgb, var(--uvec), var(--vvec)); fill-opacity: .14; stroke: none; }
+#svgDom .figgroup { cursor: move; }
 .plane .lbl { font-family: var(--font-body); font-style: italic; font-size: 14px; }
 .plane .note { fill: var(--muted); font-family: var(--font-ui); font-size: 13px; }
 
@@ -245,7 +273,7 @@ svg.plane.dragging { cursor: grabbing; }
 .swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; vertical-align: -1px; }
 .swatch.u { background: var(--uvec); }
 .swatch.v { background: var(--vvec); }
-#latticeTools { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; margin-top: .7rem; }
+#latticeTools { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; align-items: center; margin-top: .55rem; }
 #latticeTools .hint { margin: 0; }
 #latticeTools[hidden] { display: none; }
 #uvRead { font-size: 1rem; }
@@ -262,54 +290,57 @@ footer.doc {
 <body>
 <a id="courselink" href="https://tghyde.github.io/math221-fall2026/" title="Back to the Math 221 course site">&larr; Math 221</a>
 <button id="themetoggle" aria-label="Toggle light or dark theme" title="Toggle light/dark"></button>
+<div class="hero">
+  <img src="banner.png" alt="">
+  <header class="doc"><h1>Linear Map Visualizer</h1></header>
+</div>
 <main>
-  <header class="doc">
-    <h1>Linear Map Visualizer</h1>
-    <p class="tagline">See what a matrix does to the plane.</p>
-  </header>
 
   <!-- ============ matrix ============ -->
   <section class="panel" id="matpanel">
-    <p class="card-title">Matrix</p>
-    <div class="setuprow">
-      <label class="fld">m <select id="selM" aria-label="Number of rows m"><option>2</option><option>3</option></select></label>
-      <span>&times;</span>
-      <label class="fld">n <select id="selN" aria-label="Number of columns n"><option>2</option><option>3</option></select></label>
-      <span class="hint" id="dimNote"></span>
+    <div class="cardhead">
+      <p class="card-title">Matrix</p>
+      <div class="setuprow">
+        <label class="fld">m <select id="selM" aria-label="Number of rows m"><option>2</option><option>3</option></select></label>
+        <span>&times;</span>
+        <label class="fld">n <select id="selN" aria-label="Number of columns n"><option>2</option><option>3</option></select></label>
+        <span class="hint" id="dimNote"></span>
+      </div>
+      <div class="btnrow" id="editBtns">
+        <button class="filebox" id="mapBtn">Map &rarr;</button>
+        <button class="filebox" id="clearBtn">Clear</button>
+      </div>
+      <div class="btnrow" id="mapBtns" hidden>
+        <button class="filebox" id="editBtn">&larr; Edit matrix</button>
+        <button class="filebox" id="copyLink">Copy link</button>
+      </div>
     </div>
     <div class="matcols">
       <div class="matentry">
         <div id="editBox">
-          <p class="hint">Entries can be integers (<code>-3</code>), fractions (<code>1/2</code>), decimals (<code>0.25</code>), or expressions like <code>sqrt(3)/2</code>. Press Enter when you’re done.</p>
           <div class="matwrap">
             <div class="bracket bl" aria-hidden="true"></div>
             <div id="grid"></div>
             <div class="bracket br" aria-hidden="true"></div>
           </div>
-          <div class="btnrow">
-            <button class="filebox" id="mapBtn">Map &rarr;</button>
-            <button class="filebox" id="clearBtn">Clear</button>
-          </div>
+          <p class="hint">Entries: integers (<code>-3</code>), fractions (<code>1/2</code>), decimals, or expressions like <code>sqrt(3)/2</code>. Enter maps.</p>
         </div>
         <div id="mapBox" hidden>
           <div id="matTex" class="texmat"></div>
-          <div class="btnrow">
-            <button class="filebox" id="editBtn">&larr; Edit matrix</button>
-            <button class="filebox" id="copyLink">Copy link</button>
-          </div>
         </div>
         <p class="msg" id="editMsg"></p>
       </div>
-      <div class="presets">
-        <p class="card-title">Examples</p>
-        <p class="hint" style="margin-top:0">Each button fills in a fresh example of that kind of map.</p>
-        <div class="btnrow" style="margin-top:.4rem">
-          <button class="filebox" data-preset="rotation">Rotation</button>
-          <button class="filebox" data-preset="dilation">Dilation</button>
-          <button class="filebox" data-preset="reflection">Reflection</button>
-          <button class="filebox" data-preset="shear">Shear</button>
-          <button class="filebox" data-preset="projection">Projection</button>
-          <button class="filebox" data-preset="random">Random</button>
+      <div class="examples">
+        <div class="cardhead">
+          <p class="card-title">Examples</p>
+          <div class="btnrow" style="margin-left:0">
+            <button class="filebox" data-preset="rotation">Rotation</button>
+            <button class="filebox" data-preset="dilation">Dilation</button>
+            <button class="filebox" data-preset="reflection">Reflection</button>
+            <button class="filebox" data-preset="shear">Shear</button>
+            <button class="filebox" data-preset="projection">Projection</button>
+            <button class="filebox" data-preset="random">Random</button>
+          </div>
         </div>
         <div id="presetNote" class="hint" aria-live="polite"></div>
       </div>
@@ -318,18 +349,20 @@ footer.doc {
 
   <!-- ============ options ============ -->
   <section class="panel" id="options">
-    <p class="card-title">Show</p>
-    <div class="optrow">
-      <label class="fld chk"><input type="checkbox" id="chkFigure" checked> Figure</label>
-      <label class="fld chk"><input type="checkbox" id="chkCircle"> Unit circle</label>
-      <label class="fld chk"><input type="checkbox" id="chkLattice"> Lattice <span class="swatch u" aria-hidden="true"></span><span class="swatch v" aria-hidden="true"></span></label>
-      <label class="fld chk"><input type="checkbox" id="chkBasis"> Standard basis</label>
-      <label class="fld chk"><input type="checkbox" id="chkGrid" checked> Grid</label>
+    <div class="cardhead">
+      <p class="card-title">Show</p>
+      <div class="optrow">
+        <label class="fld chk"><input type="checkbox" id="chkFigure" checked> Figure</label>
+        <label class="fld chk"><input type="checkbox" id="chkCircle"> Unit circle</label>
+        <label class="fld chk"><input type="checkbox" id="chkLattice"> Lattice <span class="swatch u" aria-hidden="true"></span><span class="swatch v" aria-hidden="true"></span></label>
+        <label class="fld chk"><input type="checkbox" id="chkBasis"> Standard basis</label>
+        <label class="fld chk"><input type="checkbox" id="chkGrid" checked> Grid</label>
+      </div>
     </div>
     <div id="latticeTools" hidden>
       <span id="uvRead"></span>
       <button class="filebox" id="resetUV">Reset <i>u</i>, <i>v</i></button>
-      <span class="hint">Drag the tips of <i>u</i> and <i>v</i> in the domain (hold Shift for free movement).</span>
+      <span class="hint">Drag the tips of <i>u</i> and <i>v</i> in the domain (hold Shift to snap to half-units). The figure can be dragged too.</span>
     </div>
   </section>
 
@@ -519,6 +552,7 @@ var state = {
   A: null,       /* numeric m x n matrix once mapped */
   Atex: null,    /* matching LaTeX entries */
   u: [1, 0], v: [0, 1],
+  fo: [0, 0],    /* where the figure has been dragged to */
   show: { figure: true, circle: false, lattice: false, basis: false, grid: true },
   Wd: 5, Wc: 5   /* half-widths of the domain and codomain windows */
 };
@@ -645,15 +679,15 @@ function doMap() {
   $("editMsg").textContent = "";
   state.A = g.A; state.Atex = g.T;
   kt($("matTex"), "A = " + matrixTex(g.T), true);
-  $("editBox").hidden = true;
-  $("mapBox").hidden = false;
+  $("editBox").hidden = true; $("editBtns").hidden = true;
+  $("mapBox").hidden = false; $("mapBtns").hidden = false;
   drawAll();
   updateHash();
   return true;
 }
 function doEdit() {
-  $("mapBox").hidden = true;
-  $("editBox").hidden = false;
+  $("mapBox").hidden = true; $("mapBtns").hidden = true;
+  $("editBox").hidden = false; $("editBtns").hidden = false;
   buildGrid();
   var first = document.querySelector("input.cell");
   if (first) first.focus();
@@ -665,8 +699,8 @@ function setDims(m, n) {
   resizeEntries(m, n);
   state.A = null; state.Atex = null;
   $("presetNote").textContent = "";
-  $("mapBox").hidden = true;
-  $("editBox").hidden = false;
+  $("mapBox").hidden = true; $("mapBtns").hidden = true;
+  $("editBox").hidden = false; $("editBtns").hidden = false;
   buildGrid();
   var sup = { 2: "²", 3: "³" };
   $("dimNote").innerHTML = "<i>T</i>(<i>x</i>) = <i>Ax</i> maps ℝ" + sup[n] + " → ℝ" + sup[m];
@@ -898,8 +932,12 @@ function drawView(isDom) {
     var c3 = [e1[0] + e2[0], e1[1] + e2[1]];
     el("polygon", { points: [P.px(0, 0), P.px(e1[0], e1[1]), P.px(c3[0], c3[1]), P.px(e2[0], e2[1])].map(function (z) { return z.join(","); }).join(" "), "class": "usq" }, svg);
   }
+  if (state.show.lattice) {
+    var c4 = [uu[0] + vv[0], uu[1] + vv[1]];
+    el("polygon", { points: [P.px(0, 0), P.px(uu[0], uu[1]), P.px(c4[0], c4[1]), P.px(vv[0], vv[1])].map(function (z) { return z.join(","); }).join(" "), "class": "uvsq" }, svg);
+  }
   if (state.show.figure) {
-    var g = el("g", { transform: transformAttr(P, M) }, svg);
+    var g = el("g", { "class": "figgroup", transform: transformAttr(P, M) + " translate(" + state.fo[0] + " " + state.fo[1] + ")" }, svg);
     g.innerHTML = FIGURE;
   }
   if (state.show.circle) {
@@ -925,9 +963,9 @@ function drawView(isDom) {
   if (state.show.lattice) {
     arrow(svg, P, uu[0], uu[1], "uvec", pre + "u", null, 1);
     arrow(svg, P, vv[0], vv[1], "vvec", pre + "v", null, 1);
-    if (isDom) {
-      p = P.px(uu[0], uu[1]); el("circle", { cx: p[0], cy: p[1], r: 5.5, "class": "uvec tip" }, svg);
-      q = P.px(vv[0], vv[1]); el("circle", { cx: q[0], cy: q[1], r: 5.5, "class": "vvec tip" }, svg);
+    if (isDom) {   /* invisible handles so the cursor shows the tips are draggable */
+      p = P.px(uu[0], uu[1]); el("circle", { cx: p[0], cy: p[1], r: 12, "class": "hit" }, svg);
+      q = P.px(vv[0], vv[1]); el("circle", { cx: q[0], cy: q[1], r: 12, "class": "hit" }, svg);
     }
   }
 }
@@ -938,8 +976,9 @@ function drawAll() {
   kt($("uvRead"), "u = (" + fmt(state.u[0]) + ",\\, " + fmt(state.u[1]) + "),\\quad v = (" + fmt(state.v[0]) + ",\\, " + fmt(state.v[1]) + ")");
 }
 
-/* ===================== dragging u and v ===================== */
-var drag = null;
+/* ===================== dragging u, v, and the figure ===================== */
+var drag = null;        /* "u", "v", or "fig" */
+var dragStart = null;   /* for the figure: {at: math point, fo: offset} */
 function clientToVB(svg, ev) {
   var r = svg.getBoundingClientRect();
   return [(ev.clientX - r.left) * VB / r.width, (ev.clientY - r.top) * VB / r.height];
@@ -947,12 +986,18 @@ function clientToVB(svg, ev) {
 function setupDrag() {
   var svg = $("svgDom");
   svg.addEventListener("pointerdown", function (ev) {
-    if (!state.show.lattice || !is2x2()) return;
+    if (!is2x2()) return;
     var P = makeP(state.Wd), pt = clientToVB(svg, ev), best = null, bd = 18;
-    ["u", "v"].forEach(function (k) {
-      var t = P.px(state[k][0], state[k][1]), d = Math.hypot(t[0] - pt[0], t[1] - pt[1]);
-      if (d < bd) { bd = d; best = k; }
-    });
+    if (state.show.lattice) {
+      ["u", "v"].forEach(function (k) {
+        var t = P.px(state[k][0], state[k][1]), d = Math.hypot(t[0] - pt[0], t[1] - pt[1]);
+        if (d < bd) { bd = d; best = k; }
+      });
+    }
+    if (!best && state.show.figure && ev.target.closest && ev.target.closest(".figgroup")) {
+      best = "fig";
+      dragStart = { at: P.math(pt[0], pt[1]), fo: state.fo.slice() };
+    }
     if (!best) return;
     drag = best;
     svg.setPointerCapture(ev.pointerId);
@@ -962,7 +1007,13 @@ function setupDrag() {
   svg.addEventListener("pointermove", function (ev) {
     if (!drag) return;
     var P = makeP(state.Wd), pt = clientToVB(svg, ev), m = P.math(pt[0], pt[1]);
-    var snap = ev.shiftKey ? 100 : 2;
+    if (drag === "fig") {
+      state.fo = [dragStart.fo[0] + m[0] - dragStart.at[0], dragStart.fo[1] + m[1] - dragStart.at[1]];
+      drawAll();
+      return;
+    }
+    /* free movement by default; Shift snaps to half-units */
+    var snap = ev.shiftKey ? 2 : 100;
     var x = Math.round(m[0] * snap) / snap, y = Math.round(m[1] * snap) / snap;
     x = Math.max(-P.W, Math.min(P.W, x)); y = Math.max(-P.W, Math.min(P.W, y));
     if (x === state[drag][0] && y === state[drag][1]) return;
@@ -971,7 +1022,7 @@ function setupDrag() {
   });
   function end(ev) {
     if (!drag) return;
-    drag = null;
+    drag = null; dragStart = null;
     svg.classList.remove("dragging");
     try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
     updateHash();
@@ -986,7 +1037,7 @@ function unb64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.len
 var lastHash = "";
 function updateHash() {
   var sh = state.show;
-  var o = { v: 1, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0, uv: [state.u, state.v],
+  var o = { v: 1, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0, uv: [state.u, state.v], f: state.fo.map(function (x) { return Math.round(x * 100) / 100; }),
             s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid].map(Number), w: [state.Wd, state.Wc] };
   lastHash = "#" + b64url(JSON.stringify(o));
   try { history.replaceState(null, "", lastHash); } catch (e) {}
@@ -1009,6 +1060,7 @@ function loadHash() {
         if (Array.isArray(w) && w.length === 2 && isFinite(w[0]) && isFinite(w[1])) state[k] = [Number(w[0]), Number(w[1])];
       });
     }
+    if (Array.isArray(o.f) && o.f.length === 2 && isFinite(o.f[0]) && isFinite(o.f[1])) state.fo = [Number(o.f[0]), Number(o.f[1])];
     if (Array.isArray(o.s) && o.s.length === 5) {
       ["figure", "circle", "lattice", "basis", "grid"].forEach(function (k, i) { state.show[k] = !!o.s[i]; });
     }
