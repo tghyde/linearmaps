@@ -1015,6 +1015,7 @@ var HOUSE = (function () {
             glass: "#8fc1e3", step: "#9a9a9a", floor: "#6f6a60" };
   function v(x, y, z) { V.push([x, y, z]); return V.length - 1; }
   function face(idx, color, extra) { var f = { v: idx, color: color }; if (extra) for (var k in extra) f[k] = extra[k]; F.push(f); return F.length - 1; }
+  function texture(ids, tex) { ids.forEach(function (i) { F[i].tex = tex; }); }
   /* axis-aligned box; returns the indices of its faces by side */
   function box(x0, x1, y0, y1, z0, z1, color) {
     var p = {};
@@ -1028,7 +1029,7 @@ var HOUSE = (function () {
   /* a thick slab under the counterclockwise top quad, thickness vector t */
   function slab(top, t, color) {
     var ti = top.map(function (i) { return v(V[i][0] + t[0], V[i][1] + t[1], V[i][2] + t[2]); });
-    face(top, color);
+    texture([face(top, color)], "tiles");
     face([ti[0], ti[3], ti[2], ti[1]], color);
     for (var k = 0; k < 4; k++) { var n = (k + 1) % 4; face([top[k], ti[k], ti[n], top[n]], color); }
   }
@@ -1054,9 +1055,9 @@ var HOUSE = (function () {
   /* walls and gables */
   var walls = box(x0, x1, y0, y1, 0, z1, C.wall);
   F[walls.bottom].color = C.floor;
+  texture([walls.front, walls.back, walls.left, walls.right], "siding");
   var r0 = v(x0, ry, rz), r1 = v(x1, ry, rz);
-  face([v(x0, y0, z1), r0, v(x0, y1, z1)], C.wall);
-  face([v(x1, y0, z1), v(x1, y1, z1), r1], C.wall);
+  texture([face([v(x0, y0, z1), r0, v(x0, y1, z1)], C.wall), face([v(x1, y0, z1), v(x1, y1, z1), r1], C.wall)], "siding");
   /* roof: two overhanging slabs */
   var ye0 = y0 - ov, ye1 = y1 + ov, ze0 = roofZ(ye0), ze1 = rz - (ye1 - ry) * (rz - z1) / (y1 - ry);
   slab([v(x0 - ov, ye0, ze0), v(x1 + ov, ye0, ze0), v(x1 + ov, ry, rz), v(x0 - ov, ry, rz)], [0, 0, -0.08], C.roof);
@@ -1065,8 +1066,8 @@ var HOUSE = (function () {
   var cx0 = 3.0, cx1 = 3.3, cy0 = 1.3, cy1 = 1.6, ct = 2.3;
   var c = [v(cx0, cy0, roofZ(cy0)), v(cx1, cy0, roofZ(cy0)), v(cx1, cy1, roofZ(cy1)), v(cx0, cy1, roofZ(cy1)),
            v(cx0, cy0, ct), v(cx1, cy0, ct), v(cx1, cy1, ct), v(cx0, cy1, ct)];
-  face([c[0], c[1], c[5], c[4]], C.chimney); face([c[1], c[2], c[6], c[5]], C.chimney);
-  face([c[2], c[3], c[7], c[6]], C.chimney); face([c[3], c[0], c[4], c[7]], C.chimney);
+  texture([face([c[0], c[1], c[5], c[4]], C.chimney), face([c[1], c[2], c[6], c[5]], C.chimney),
+           face([c[2], c[3], c[7], c[6]], C.chimney), face([c[3], c[0], c[4], c[7]], C.chimney)], "brick");
   box(cx0 - 0.04, cx1 + 0.04, cy0 - 0.04, cy1 + 0.04, ct, ct + 0.08, C.cap);
   /* door with frame, step, windows on every wall */
   decal("front", 2.25, 2.75, 0, 0.85, C.frame, walls.front);
@@ -1323,104 +1324,185 @@ function meshEdges(faces) {
   });
   return out;
 }
-/* Shaded: back faces are culled (the mesh is closed with outward windings),
- * the rest painted back to front together with any extra solid objects
- * (the sphere).  Flattened: one flat silhouette plus every edge of the
- * mesh, front and back, so the door, roof lines and chimney still read. */
-function renderMesh(ctx, prim) {
-  var pv = prim.verts.map(function (p) { return projPt(ctx, p); });
-  var cols = themeColors(), svg = ctx.svg;
-  if (!prim.shaded && prim.flat) {
-    /* a flattened house still has two sides: draw the faces whose domain
-     * normal points toward the viewer's side of the plane, back to front
-     * along the kernel direction */
-    var k = prim.flat.k, sd = prim.flat.side, dv = prim.domVerts, lst = [];
-    prim.faces.forEach(function (f, i) {
-      var a = dv[f.v[0]], b = dv[f.v[1]], c = dv[f.v[2]];
-      var n = cross3(add(b, scale(a, -1)), add(c, scale(a, -1)));
-      var nl = norm(n), nk = nl < 1e-12 ? 0 : dot(n, k) / nl;
-      var cen = [0, 0, 0]; f.v.forEach(function (vi) { cen = add(cen, dv[vi]); }); cen = scale(cen, 1 / f.v.length);
-      lst.push({ f: f, i: i, nk: nk, depth: sd * dot(cen, k) });
-    });
-    lst.forEach(function (F) { if (F.f.decalOf !== undefined) { F.nk = lst[F.f.decalOf].nk; F.depth = lst[F.f.decalOf].depth + 1e-6; } });
-    lst = lst.filter(function (F) { return sd * F.nk > 1e-9; });
-    lst.sort(function (a, b) { return a.depth - b.depth; });
-    lst.forEach(function (F) {
-      var f = F.f, lam = 0.45 + 0.55 * Math.abs(F.nk);
-      var fillc = f.color ? rgbStr(litColor(f.color, lam)) : rgbStr(mixRGB(cols.bg, cols.accent, 0.3 + 0.25 * Math.abs(F.nk)));
-      var strokec = f.color ? edgeColor(f.color) : rgbStr(mixRGB(cols.accent, cols.fg, 0.25));
-      el("polygon", { points: f.v.map(function (vi) { return pv[vi].x + "," + pv[vi].y; }).join(" "), fill: fillc, stroke: strokec, "stroke-width": f.decalOf !== undefined ? 0.5 : 0.8, "stroke-opacity": 0.85, "class": "mesh" }, svg);
-    });
-    (prim.extras || []).forEach(function (x) { x.draw(svg); });
-    return;
+/* ---- BSP tree of the mesh, built once in domain coordinates.  A traversal
+ * from a view direction gives an exact painter's order for any linear map
+ * (planes map to planes), which centroid sorting cannot do for the roof
+ * overhang against the walls.  Faces straddling a plane are split. ---- */
+var BSP_EPS = 1e-6;
+function polyNormal(pts) {
+  var n = [0, 0, 0];
+  for (var i = 0; i < pts.length; i++) { var a = pts[i], b = pts[(i + 1) % pts.length]; n = add(n, cross3(a, b)); }
+  return unit(n);
+}
+function splitPoly(poly, n, k) {
+  var front = [], back = [], pts = poly.pts, N = pts.length;
+  for (var i = 0; i < N; i++) {
+    var a = pts[i], b = pts[(i + 1) % N], da = dot(n, a) - k, db = dot(n, b) - k;
+    if (da >= -BSP_EPS) front.push(a);
+    if (da <= BSP_EPS) back.push(a);
+    if ((da > BSP_EPS && db < -BSP_EPS) || (da < -BSP_EPS && db > BSP_EPS)) {
+      var t = da / (da - db), m = add(a, scale(add(b, scale(a, -1)), t));
+      front.push(m); back.push(m);
+    }
   }
-  if (!prim.shaded) {
-    var fill = rgbStr(mixRGB(cols.bg, cols.accent, 0.42));
-    prim.faces.forEach(function (f) {
+  function mk(ps) { return ps.length >= 3 ? { pts: ps, f: poly.f, frame: poly.frame, n: poly.n } : null; }
+  return { front: mk(front), back: mk(back) };
+}
+function buildBSP(polys) {
+  if (!polys.length) return null;
+  var p0 = polys[0], n = p0.n, k = dot(n, p0.pts[0]);
+  var node = { n: n, k: k, co: [p0], front: [], back: [] };
+  for (var i = 1; i < polys.length; i++) {
+    var q = polys[i], lo = Infinity, hi = -Infinity;
+    q.pts.forEach(function (p) { var d = dot(n, p) - k; lo = Math.min(lo, d); hi = Math.max(hi, d); });
+    if (hi <= BSP_EPS && lo >= -BSP_EPS) node.co.push(q);
+    else if (lo >= -BSP_EPS) node.front.push(q);
+    else if (hi <= BSP_EPS) node.back.push(q);
+    else { var sp = splitPoly(q, n, k); if (sp.front) node.front.push(sp.front); if (sp.back) node.back.push(sp.back); }
+  }
+  node.front = buildBSP(node.front);
+  node.back = buildBSP(node.back);
+  return node;
+}
+/* polygons in back-to-front order for a viewer in direction c (toward the viewer) */
+function traverseBSP(node, c, out) {
+  if (!node) return out;
+  if (dot(node.n, c) > 0) { traverseBSP(node.back, c, out); out.push.apply(out, node.co); traverseBSP(node.front, c, out); }
+  else { traverseBSP(node.front, c, out); out.push.apply(out, node.co); traverseBSP(node.back, c, out); }
+  return out;
+}
+/* clip the 2D segment a-b to a convex counterclockwise polygon */
+function clipSeg2(a, b, poly) {
+  var t0 = 0, t1 = 1;
+  for (var i = 0; i < poly.length; i++) {
+    var p = poly[i], q = poly[(i + 1) % poly.length], ex = q[0] - p[0], ey = q[1] - p[1];
+    var fa = ex * (a[1] - p[1]) - ey * (a[0] - p[0]), fb = ex * (b[1] - p[1]) - ey * (b[0] - p[0]);
+    if (fa < 0 && fb < 0) return null;
+    if (fa < 0) t0 = Math.max(t0, fa / (fa - fb));
+    else if (fb < 0) t1 = Math.min(t1, fa / (fa - fb));
+    if (t0 > t1) return null;
+  }
+  return [[a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0], [a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1]];
+}
+/* Texture lines for one polygon piece, generated in the frame of its
+ * original face (so courses line up across pieces) and clipped to the
+ * piece: siding, roof shingles, or brick courses. */
+function textureLines(poly) {
+  var tex = poly.f.tex;
+  if (!tex) return [];
+  var fr = poly.frame, P2 = poly.pts.map(function (p) { var d = add(p, scale(fr.p0, -1)); return [dot(d, fr.U), dot(d, fr.V)]; });
+  var area = 0;
+  for (var i = 0; i < P2.length; i++) { var a = P2[i], b = P2[(i + 1) % P2.length]; area += a[0] * b[1] - b[0] * a[1]; }
+  if (area < 0) P2.reverse();
+  var amin = Infinity, amax = -Infinity, bmin = Infinity, bmax = -Infinity;
+  P2.forEach(function (q) { amin = Math.min(amin, q[0]); amax = Math.max(amax, q[0]); bmin = Math.min(bmin, q[1]); bmax = Math.max(bmax, q[1]); });
+  var segs = [], rowH, tw, k, j, bb;
+  if (tex === "siding") {
+    for (bb = 0.15; bb <= bmax; bb += 0.15) if (bb >= bmin) segs.push([[amin - 1, bb], [amax + 1, bb]]);
+  } else {
+    rowH = tex === "tiles" ? 0.22 : 0.075; tw = tex === "tiles" ? 0.3 : 0.14;
+    for (k = 0; k * rowH <= bmax; k++) {
+      bb = k * rowH;
+      if (k > 0 && bb >= bmin) segs.push([[amin - 1, bb], [amax + 1, bb]]);
+      if (bb + rowH < bmin) continue;
+      for (j = Math.floor(amin / tw) - 1; j * tw <= amax + tw; j++) {
+        var aa = j * tw + (k % 2 ? tw / 2 : 0);
+        if (aa >= amin && aa <= amax) segs.push([[aa, bb], [aa, bb + rowH]]);
+      }
+    }
+  }
+  var out = [];
+  segs.forEach(function (sg) {
+    var c = clipSeg2(sg[0], sg[1], P2);
+    if (!c || Math.hypot(c[1][0] - c[0][0], c[1][1] - c[0][1]) < 1e-4) return;
+    out.push(c.map(function (q) { return add(fr.p0, add(scale(fr.U, q[0]), scale(fr.V, q[1]))); }));
+  });
+  return out;
+}
+/* prepare a mesh: polygons with frames, the BSP tree, texture lines */
+function prepareMesh(model) {
+  if (model.bsp) return model;
+  var polys = model.faces.map(function (f) {
+    var pts = f.v.map(function (i) { return model.verts[i]; }), n = polyNormal(pts);
+    var U = unit(add(pts[1], scale(pts[0], -1))), V = n && U ? unit(cross3(n, U)) : null;
+    return { pts: pts, f: f, n: n || [0, 0, 1], frame: { p0: pts[0], U: U || [1, 0, 0], V: V || [0, 0, 1] } };
+  });
+  model.bsp = buildBSP(polys);
+  traverseBSP(model.bsp, [0, 0, 1], []).forEach(function (q) { q.lines = textureLines(q); });
+  return model;
+}
+/* Draw a mesh under the map M.  mode "shaded": c = A^-1 d gives both the
+ * painter's order and the facing test; "flat" (a flattening): c is the
+ * facing side of the kernel, lighting from the domain normals; "sil": a
+ * silhouette with all edges (rank <= 1). */
+function renderMesh(ctx, prim) {
+  var model = prepareMesh(prim.model), M = prim.M, cols = themeColors(), svg = ctx.svg;
+  function pix(p) { return projPt(ctx, matVec(M, p)); }
+  if (prim.mode === "sil" || !prim.c) {
+    var pv = model.verts.map(pix), fill = rgbStr(mixRGB(cols.bg, cols.accent, 0.42));
+    model.faces.forEach(function (f) {
       el("polygon", { points: f.v.map(function (vi) { return pv[vi].x + "," + pv[vi].y; }).join(" "), fill: fill, stroke: fill, "stroke-width": 0.8, "class": "mesh" }, svg);
     });
     var ec = rgbStr(mixRGB(cols.accent, cols.fg, 0.25));
-    meshEdges(prim.faces).forEach(function (e) {
+    meshEdges(model.faces).forEach(function (e) {
       el("line", { x1: pv[e[0]].x, y1: pv[e[0]].y, x2: pv[e[1]].x, y2: pv[e[1]].y, stroke: ec, "stroke-width": 1, "stroke-opacity": 0.85, "stroke-linecap": "round" }, svg);
     });
     (prim.extras || []).forEach(function (x) { x.draw(svg); });
     return;
   }
-  var sign = prim.detSign || 1, items = [];
-  prim.faces.forEach(function (f, i) {
-    var d = 0, area = 0, n = f.v.length;
-    for (var k = 0; k < n; k++) {
-      var a = pv[f.v[k]], b = pv[f.v[(k + 1) % n]];
-      d += a.d; area += a.x * b.y - b.x * a.y;
-    }
-    items.push({ f: f, i: i, d: d / n, front: area * sign < 0 });
-  });
-  items.forEach(function (F) { if (F.f.decalOf !== undefined) { F.d = items[F.f.decalOf].d + 1e-6; F.front = items[F.f.decalOf].front; } });
-  items = items.filter(function (F) { return F.front; });
-  items.sort(function (a, b) { return a.d - b.d; });        /* far first */
-  /* Solid extras (the sphere): for each face that overlaps it on screen,
-   * compare the face's depth with the sphere's near surface at a point of
-   * the overlap; exact when the two solids do not intersect. */
-  (prim.extras || []).forEach(function (x) {
-    var frontOf = [], behindOf = [];
-    items.forEach(function (F, idx) {
-      var poly = F.f.v.map(function (vi) { return [pv[vi].x, pv[vi].y]; }), sample = null, k;
-      var cx = 0, cy = 0; poly.forEach(function (q) { cx += q[0]; cy += q[1]; }); cx /= poly.length; cy /= poly.length;
-      if (x.nearDepth(cx, cy) !== null) sample = [cx, cy];
-      else if (pointInPoly(x.center[0], x.center[1], poly)) sample = x.center;
-      else {
-        for (k = 0; k < poly.length && !sample; k++) if (x.nearDepth(poly[k][0], poly[k][1]) !== null) sample = poly[k];
-        for (k = 0; k < x.outlinePx.length && !sample; k += 3) if (pointInPoly(x.outlinePx[k][0], x.outlinePx[k][1], poly)) sample = x.outlinePx[k];
-      }
-      if (!sample) return;
-      var sd = x.nearDepth(sample[0], sample[1]);
-      if (sd === null) return;
-      /* depth of the face's plane at the sample point */
-      var a = pv[F.f.v[0]], b = pv[F.f.v[1]], c = pv[F.f.v[2]], fd = F.d;
-      var det = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
-      if (Math.abs(det) > 1e-6) {
-        var al = ((b.d - a.d) * (c.y - a.y) - (c.d - a.d) * (b.y - a.y)) / det;
-        var be = ((c.d - a.d) * (b.x - a.x) - (b.d - a.d) * (c.x - a.x)) / det;
-        fd = a.d + al * (sample[0] - a.x) + be * (sample[1] - a.y);
-      }
-      (fd > sd ? frontOf : behindOf).push(idx);
+  var c = prim.c, kh = prim.k ? unit(prim.k) : null;
+  var items = traverseBSP(model.bsp, c, []).filter(function (q) { return dot(q.n, c) > 1e-9; })
+    .map(function (q) { return { q: q, pix: q.pts.map(pix) }; });
+  if (prim.mode === "shaded") {
+    /* solid extras (the sphere): compare with the near surface at an overlap point */
+    (prim.extras || []).forEach(function (x) {
+      var frontOf = [], behindOf = [];
+      items.forEach(function (F, idx) {
+        var poly = F.pix.map(function (z) { return [z.x, z.y]; }), sample = null, k;
+        var cx = 0, cy = 0; poly.forEach(function (z) { cx += z[0]; cy += z[1]; }); cx /= poly.length; cy /= poly.length;
+        if (x.nearDepth(cx, cy) !== null) sample = [cx, cy];
+        else if (pointInPoly(x.center[0], x.center[1], poly)) sample = x.center;
+        else {
+          for (k = 0; k < poly.length && !sample; k++) if (x.nearDepth(poly[k][0], poly[k][1]) !== null) sample = poly[k];
+          for (k = 0; k < x.outlinePx.length && !sample; k += 3) if (pointInPoly(x.outlinePx[k][0], x.outlinePx[k][1], poly)) sample = x.outlinePx[k];
+        }
+        if (!sample) return;
+        var sd = x.nearDepth(sample[0], sample[1]);
+        if (sd === null) return;
+        var a = F.pix[0], b = F.pix[1], cc = F.pix[2], fd = a.d;
+        var det = (b.x - a.x) * (cc.y - a.y) - (cc.x - a.x) * (b.y - a.y);
+        if (Math.abs(det) > 1e-6) {
+          var al = ((b.d - a.d) * (cc.y - a.y) - (cc.d - a.d) * (b.y - a.y)) / det;
+          var be = ((cc.d - a.d) * (b.x - a.x) - (b.d - a.d) * (cc.x - a.x)) / det;
+          fd = a.d + al * (sample[0] - a.x) + be * (sample[1] - a.y);
+        }
+        (fd > sd ? frontOf : behindOf).push(idx);
+      });
+      var at = behindOf.length ? Math.max.apply(null, behindOf) + 1 : 0;
+      var early = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) >= 0; });
+      var before = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) < 0; });
+      items = before.concat([{ extra: x }], early, items.slice(at));
     });
-    var at = behindOf.length ? Math.max.apply(null, behindOf) + 1 : 0;
-    var early = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) >= 0; });
-    var before = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) < 0; });
-    items = before.concat([{ extra: x, d: x.d }], early, items.slice(at));
-  });
-  var light = [-0.35, -0.5, 0.8], ll = norm(light); light = scale(light, 1 / ll);
+  }
+  var light = unit([-0.35, -0.5, 0.8]);
   items.forEach(function (F) {
     if (F.extra) { F.extra.draw(svg); return; }
-    var f = F.f, pts = f.v.map(function (vi) { return pv[vi].x + "," + pv[vi].y; }).join(" ");
-    var a = pv[f.v[0]], b = pv[f.v[1]], c = pv[f.v[2]];
-    var nrm = cross3([b.x - a.x, b.y - a.y, b.d - a.d], [c.x - a.x, c.y - a.y, c.d - a.d]);
-    var ln = norm(nrm), lam = ln < 1e-9 ? 0.5 : Math.abs(dot(nrm, light)) / ln;
+    var q = F.q, f = q.f, pv = F.pix, lam;
+    if (prim.mode === "shaded") {
+      var a = pv[0], b = pv[1], cc = pv[2];
+      var nrm = cross3([b.x - a.x, b.y - a.y, b.d - a.d], [cc.x - a.x, cc.y - a.y, cc.d - a.d]);
+      var ln = norm(nrm); lam = ln < 1e-9 ? 0.5 : Math.abs(dot(nrm, light)) / ln;
+    } else lam = 0.45 + 0.55 * Math.abs(dot(q.n, kh));
     var fillc = f.color ? rgbStr(litColor(f.color, lam)) : rgbStr(mixRGB(cols.bg, cols.accent, 0.2 + 0.5 * lam));
     var strokec = f.color ? edgeColor(f.color) : rgbStr(cols.accent);
-    el("polygon", { points: pts, fill: fillc, stroke: strokec, "stroke-width": f.decalOf !== undefined ? 0.5 : 0.8, "class": "mesh" }, svg);
+    el("polygon", { points: pv.map(function (z) { return z.x + "," + z.y; }).join(" "), fill: fillc, stroke: strokec, "stroke-width": f.decalOf !== undefined ? 0.5 : 0.8, "class": "mesh" }, svg);
+    if (q.lines && q.lines.length) {
+      var d = "";
+      q.lines.forEach(function (sg) { var p1 = pix(sg[0]), p2 = pix(sg[1]); d += "M" + p1.x.toFixed(1) + " " + p1.y.toFixed(1) + "L" + p2.x.toFixed(1) + " " + p2.y.toFixed(1); });
+      el("path", { d: d, fill: "none", stroke: strokec, "stroke-width": 0.6, "stroke-opacity": 0.45 }, svg);
+    }
   });
+  if (prim.mode !== "shaded") (prim.extras || []).forEach(function (x) { x.draw(svg); });
 }
 function perpBasis(w) {   /* orthonormal pair perpendicular to w */
   var t = Math.abs(w[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
@@ -1575,8 +1657,9 @@ function drawView(isDom) {
   if (state.show.figure) {
     if (nIn === 2) prims.push({ t: "fig2d", M: M, fo: state.fo });
     else {
-      meshPrim = { t: "mesh", verts: HOUSE.verts.map(function (p) { return matVec(M, p); }), faces: HOUSE.faces, shaded: out === 3 && rank === 3, detSign: detSign(M), extras: [],
-                   domVerts: HOUSE.verts, flat: (rank === 2 && !(out === 3 && rank === 3)) ? flatSide(M, out, ctx.Q) : null };
+      meshPrim = { t: "mesh", model: HOUSE, M: M, extras: [], mode: "sil", c: null, k: null };
+      if (out === 3 && rank === 3) { meshPrim.mode = "shaded"; meshPrim.c = solve3(M, ctx.Q[2]); }
+      else if (rank === 2) { var fsm = flatSide(M, out, ctx.Q); if (fsm) { meshPrim.mode = "flat"; meshPrim.c = scale(fsm.k, fsm.side); meshPrim.k = fsm.k; } }
       prims.push(meshPrim);
     }
   }
