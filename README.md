@@ -30,8 +30,11 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
   and drag the figure around; the codomain follows live. The vectors can
   also be typed: click their typeset form, edit, press Enter. Clicking the
   typeset matrix reopens the matrix editor.
-- 3D views share an orbit camera: drag to rotate. Every view zooms with
-  the scroll wheel or trackpad (and the +/− buttons).
+- 2D views pan by dragging empty space and zoom about the cursor with the
+  scroll wheel or trackpad (the +/− buttons zoom too); 3D views share an
+  orbit camera, so dragging rotates. Double-click a view to reset it.
+- The unit circle is a filled disc and the sphere a solid ball, each with
+  one half red and the other amber so rotations are easy to read.
 - Maps that flatten space (a 3 × 2 matrix, or a singular 3 × 3 one) draw the
   figure as a flat silhouette and the sphere as the filled ellipse it maps
   onto. Singular 2 × 2 maps collapse the lattice to a line.
