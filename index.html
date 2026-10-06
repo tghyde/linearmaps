@@ -1788,9 +1788,15 @@ function setupPointer() {
             if (d < bd) { bd = d; best = k; }
           });
         }
+        var onFig = false;
+        if (isDom && state.n === 2 && state.show.figure) {
+          /* the figure is thin, so anything inside its on-screen box grabs it */
+          var fg = svg.querySelector(".figgroup"), fb = fg && fg.getBoundingClientRect();
+          onFig = (ev.target.closest && ev.target.closest(".figgroup")) ||
+                  (fb && ev.clientX >= fb.left - 4 && ev.clientX <= fb.right + 4 && ev.clientY >= fb.top - 4 && ev.clientY <= fb.bottom + 4);
+        }
         if (best) drag = { kind: best, svg: svg };
-        else if (isDom && state.n === 2 && state.show.figure && ev.target.closest && ev.target.closest(".figgroup"))
-          drag = { kind: "fig", svg: svg, at: P.math(pt[0], pt[1]), fo: state.fo.slice() };
+        else if (onFig) drag = { kind: "fig", svg: svg, at: P.math(pt[0], pt[1]), fo: state.fo.slice() };
         else drag = { kind: "pan", svg: svg, key: pk, start: pt, ctr: state.pan[pk].slice(), s: P.s };
       }
       svg.setPointerCapture(ev.pointerId);
