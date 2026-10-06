@@ -931,6 +931,19 @@ function solve3(M, b) {
     return det3(N) / d;
   });
 }
+function inv3(M) {
+  var cols = [0, 1, 2].map(function (k) { return solve3(M, [k === 0 ? 1 : 0, k === 1 ? 1 : 0, k === 2 ? 1 : 0]); });
+  if (cols.some(function (c) { return !c; })) return null;
+  return [0, 1, 2].map(function (i) { return [cols[0][i], cols[1][i], cols[2][i]]; });
+}
+function pointInPoly(x, y, poly) {   /* poly: [[x, y], ...] */
+  var inside = false;
+  for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
 /* orthonormal basis of the row space (Gram-Schmidt); its length is the rank */
 function rowBasis(M) {
   var rs = [];
@@ -957,16 +970,17 @@ var FIGURE = '<path class="figsolid" fill-rule="evenodd" d="M0.514 0.4C0.506 0.4
  * vertex indices; "tone" darkens a face, "decalOf" draws a face right after
  * the face it sits on (door, window). */
 var HOUSE = (function () {
-  var x0 = 0.5, x1 = 2.5, y0 = 0.5, y1 = 2.0, z1 = 1.2, ry = 1.25, rz = 2.0;
+  /* kept clear of the unit sphere: nearest corner (1.5, 1.1, 0) is 1.86 from the origin */
+  var x0 = 1.5, x1 = 3.5, y0 = 1.1, y1 = 2.6, z1 = 1.2, ry = 1.85, rz = 2.0;
   function roofZ(y) { return z1 + (y - y0) / (ry - y0) * (rz - z1); }
   var V = [
     [x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0],
     [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
     [x0, ry, rz], [x1, ry, rz],
-    [2.0, 0.7, roofZ(0.7)], [2.3, 0.7, roofZ(0.7)], [2.3, 1.0, roofZ(1.0)], [2.0, 1.0, roofZ(1.0)],
-    [2.0, 0.7, 2.3], [2.3, 0.7, 2.3], [2.3, 1.0, 2.3], [2.0, 1.0, 2.3],
-    [0.8, y0, 0], [1.2, y0, 0], [1.2, y0, 0.75], [0.8, y0, 0.75],
-    [x1, 0.9, 0.5], [x1, 1.5, 0.5], [x1, 1.5, 0.95], [x1, 0.9, 0.95]
+    [3.0, 1.3, roofZ(1.3)], [3.3, 1.3, roofZ(1.3)], [3.3, 1.6, roofZ(1.6)], [3.0, 1.6, roofZ(1.6)],
+    [3.0, 1.3, 2.3], [3.3, 1.3, 2.3], [3.3, 1.6, 2.3], [3.0, 1.6, 2.3],
+    [1.8, y0, 0], [2.2, y0, 0], [2.2, y0, 0.75], [1.8, y0, 0.75],
+    [x1, 1.5, 0.5], [x1, 2.1, 0.5], [x1, 2.1, 0.95], [x1, 1.5, 0.95]
   ];
   var F = [
     { v: [0, 3, 2, 1] }, { v: [0, 1, 5, 4] }, { v: [1, 2, 6, 5] }, { v: [2, 3, 7, 6] }, { v: [3, 0, 4, 7] },
@@ -1224,8 +1238,39 @@ function renderMesh(ctx, prim) {
   });
   items.forEach(function (F) { if (F.f.decalOf !== undefined) { F.d = items[F.f.decalOf].d + 1e-6; F.front = items[F.f.decalOf].front; } });
   items = items.filter(function (F) { return F.front; });
-  (prim.extras || []).forEach(function (x) { items.push({ extra: x, d: x.d }); });
   items.sort(function (a, b) { return a.d - b.d; });        /* far first */
+  /* Solid extras (the sphere): for each face that overlaps it on screen,
+   * compare the face's depth with the sphere's near surface at a point of
+   * the overlap; exact when the two solids do not intersect. */
+  (prim.extras || []).forEach(function (x) {
+    var frontOf = [], behindOf = [];
+    items.forEach(function (F, idx) {
+      var poly = F.f.v.map(function (vi) { return [pv[vi].x, pv[vi].y]; }), sample = null, k;
+      var cx = 0, cy = 0; poly.forEach(function (q) { cx += q[0]; cy += q[1]; }); cx /= poly.length; cy /= poly.length;
+      if (x.nearDepth(cx, cy) !== null) sample = [cx, cy];
+      else if (pointInPoly(x.center[0], x.center[1], poly)) sample = x.center;
+      else {
+        for (k = 0; k < poly.length && !sample; k++) if (x.nearDepth(poly[k][0], poly[k][1]) !== null) sample = poly[k];
+        for (k = 0; k < x.outlinePx.length && !sample; k += 3) if (pointInPoly(x.outlinePx[k][0], x.outlinePx[k][1], poly)) sample = x.outlinePx[k];
+      }
+      if (!sample) return;
+      var sd = x.nearDepth(sample[0], sample[1]);
+      if (sd === null) return;
+      /* depth of the face's plane at the sample point */
+      var a = pv[F.f.v[0]], b = pv[F.f.v[1]], c = pv[F.f.v[2]], fd = F.d;
+      var det = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+      if (Math.abs(det) > 1e-6) {
+        var al = ((b.d - a.d) * (c.y - a.y) - (c.d - a.d) * (b.y - a.y)) / det;
+        var be = ((c.d - a.d) * (b.x - a.x) - (b.d - a.d) * (c.x - a.x)) / det;
+        fd = a.d + al * (sample[0] - a.x) + be * (sample[1] - a.y);
+      }
+      (fd > sd ? frontOf : behindOf).push(idx);
+    });
+    var at = behindOf.length ? Math.max.apply(null, behindOf) + 1 : 0;
+    var early = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) >= 0; });
+    var before = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) < 0; });
+    items = before.concat([{ extra: x, d: x.d }], early, items.slice(at));
+  });
   var light = [-0.35, -0.5, 0.8], ll = norm(light); light = scale(light, 1 / ll);
   items.forEach(function (F) {
     if (F.extra) { F.extra.draw(svg); return; }
@@ -1253,8 +1298,22 @@ function sphereObject(ctx, M) {
   }
   var c = solve3(M, ctx.Q[2]);
   var center = projPt(ctx, [0, 0, 0]);
+  /* depth of the near surface under a screen pixel: solve |A^-1 Q^T (sx, sy, t)| = 1 for t */
+  var Ai = inv3(M), B = Ai ? matMul(Ai, [0, 1, 2].map(function (i) { return [ctx.Q[0][i], ctx.Q[1][i], ctx.Q[2][i]]; })) : null;
+  var P = ctx.P;
+  function nearDepth(px, py) {
+    if (!B) return null;
+    var sx = (px - P.c) / P.s, sy = (P.c - py) / P.s;
+    var a = [0, 1, 2].map(function (i) { return B[i][0] * sx + B[i][1] * sy; }), b = [B[0][2], B[1][2], B[2][2]];
+    var bb = dot(b, b), ab = dot(a, b), disc = ab * ab - bb * (dot(a, a) - 1);
+    if (disc < 0 || bb < 1e-12) return null;
+    return (-ab + Math.sqrt(disc)) / bb * P.s;
+  }
   return {
     d: center.d,
+    center: [center.x, center.y],
+    outlinePx: outline.map(function (o) { return o.split(",").map(Number); }),
+    nearDepth: nearDepth,
     draw: function (svg) {
       var cols = themeColors(), id = "sphg-" + svg.id;
       var defs = el("defs", {}, svg);
