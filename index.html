@@ -270,6 +270,7 @@ svg.plane.rot.dragging { cursor: grabbing; }
 .plane .lat.lw { stroke: var(--wvec); }
 .plane .latpt { fill: var(--fg); fill-opacity: .8; }
 .plane .usq { fill: var(--fg); fill-opacity: .08; stroke: none; }
+.plane .usqedge { stroke: var(--fg); stroke-opacity: .4; stroke-width: 1; stroke-linecap: round; }
 .plane .uvec { stroke: var(--uvec); fill: var(--uvec); }
 .plane .vvec { stroke: var(--vvec); fill: var(--vvec); }
 .plane .wvec { stroke: var(--wvec); fill: var(--wvec); }
@@ -1107,6 +1108,18 @@ function latticeBlock(vs, K) {
   });
   return { points: pts, segments: segs };
 }
+/* edges of the parallelogram / parallelepiped spanned by vs, as segment prims */
+function boxEdges(vs, cls) {
+  var k = vs.length, zero = vs[0].map(function () { return 0; }), out = [];
+  function corner(bits) { var p = zero; for (var i = 0; i < k; i++) if (bits[i]) p = add(p, vs[i]); return p; }
+  var n = 1 << k;
+  for (var a = 0; a < n; a++) for (var i = 0; i < k; i++) if (!(a & (1 << i))) {
+    var bitsA = [], bitsB = [];
+    for (var j = 0; j < k; j++) { bitsA.push((a >> j) & 1); bitsB.push(((a | (1 << i)) >> j) & 1); }
+    out.push({ t: "segment", a: corner(bitsA), b: corner(bitsB), cls: cls });
+  }
+  return out;
+}
 /* faces of the parallelogram / parallelepiped spanned by vs, as polygon prims */
 function boxFaces(vs, cls) {
   var k = vs.length, zero = vs[0].map(function () { return 0; });
@@ -1448,7 +1461,7 @@ function drawView(isDom) {
   var lv = vnames.map(function (k) { return matVec(M, vecVal(k)); });       /* images of u, v, w */
   var famCls = ["uvec", "vvec", "wvec"];
 
-  if (state.show.basis) prims = prims.concat(boxFaces(cols, "usq"));
+  if (state.show.basis) prims = prims.concat(boxFaces(cols, "usq"), boxEdges(cols, "usqedge"));
   if (state.show.lattice) prims = prims.concat(boxFaces(lv, "uvsq"));
 
   var meshPrim = null;
