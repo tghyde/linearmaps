@@ -944,6 +944,39 @@ function pointInPoly(x, y, poly) {   /* poly: [[x, y], ...] */
   }
   return inside;
 }
+function unit(v) { var l = norm(v); return l < 1e-12 ? null : scale(v, 1 / l); }
+function bestCross(vs) {   /* unit cross product of the most independent pair among 3-vectors */
+  var best = null, bl = 0;
+  for (var i = 0; i < vs.length; i++) for (var j = i + 1; j < vs.length; j++) {
+    var c = cross3(vs[i], vs[j]), l = norm(c);
+    if (l > bl) { bl = l; best = c; }
+  }
+  return bl < 1e-9 ? null : scale(best, 1 / bl);
+}
+/* For a rank-2 map M out of R^3: the kernel direction k and a sign so that a
+ * face with outward domain normal n is seen by the viewer iff
+ * side * (n . k) > 0.  The sign comes from the orientation-preserving
+ * un-squashing of the map (M + nu k^T with positive determinant), so for an
+ * orthogonal projection the top of the house lands on top.  For a 2D
+ * codomain the viewer looks at the plane from the side that makes (x, y)
+ * counterclockwise. */
+function flatSide(M, out, Q) {
+  var k = bestCross(M);   /* normal to the row space = kernel */
+  if (!k) return null;
+  var side;
+  if (out === 3) {
+    var cols = [0, 1, 2].map(function (j) { return [M[0][j], M[1][j], M[2][j]]; });
+    var nu = bestCross(cols);
+    if (!nu) return null;
+    var ext = M.map(function (r, i) { return r.map(function (x, j) { return x + nu[i] * k[j]; }); });
+    var sigma = det3(ext) < 0 ? -1 : 1;
+    var dv = dot(Q[2], scale(nu, sigma));
+    side = dv < 0 ? -1 : 1;
+  } else {
+    side = det3([M[0], M[1], k]) < 0 ? -1 : 1;
+  }
+  return { k: k, side: side };
+}
 /* orthonormal basis of the row space (Gram-Schmidt); its length is the rank */
 function rowBasis(M) {
   var rs = [];
@@ -1215,6 +1248,30 @@ function meshEdges(faces) {
 function renderMesh(ctx, prim) {
   var pv = prim.verts.map(function (p) { return projPt(ctx, p); });
   var cols = themeColors(), svg = ctx.svg;
+  if (!prim.shaded && prim.flat) {
+    /* a flattened house still has two sides: draw the faces whose domain
+     * normal points toward the viewer's side of the plane, back to front
+     * along the kernel direction */
+    var k = prim.flat.k, sd = prim.flat.side, dv = prim.domVerts, lst = [];
+    prim.faces.forEach(function (f, i) {
+      var a = dv[f.v[0]], b = dv[f.v[1]], c = dv[f.v[2]];
+      var n = cross3(add(b, scale(a, -1)), add(c, scale(a, -1)));
+      var nl = norm(n), nk = nl < 1e-12 ? 0 : dot(n, k) / nl;
+      var cen = [0, 0, 0]; f.v.forEach(function (vi) { cen = add(cen, dv[vi]); }); cen = scale(cen, 1 / f.v.length);
+      lst.push({ f: f, i: i, nk: nk, depth: sd * dot(cen, k) });
+    });
+    lst.forEach(function (F) { if (F.f.decalOf !== undefined) { F.nk = lst[F.f.decalOf].nk; F.depth = lst[F.f.decalOf].depth + 1e-6; } });
+    lst = lst.filter(function (F) { return sd * F.nk > 1e-9; });
+    lst.sort(function (a, b) { return a.depth - b.depth; });
+    var edge = rgbStr(mixRGB(cols.accent, cols.fg, 0.25));
+    lst.forEach(function (F) {
+      var f = F.f, rgb = mixRGB(cols.bg, cols.accent, 0.3 + 0.25 * Math.abs(F.nk));
+      if (f.tone !== undefined) rgb = mixRGB(rgb, cols.fg, 1 - f.tone);
+      el("polygon", { points: f.v.map(function (vi) { return pv[vi].x + "," + pv[vi].y; }).join(" "), fill: rgbStr(rgb), stroke: edge, "stroke-width": 1, "stroke-opacity": 0.85, "class": "mesh" }, svg);
+    });
+    (prim.extras || []).forEach(function (x) { x.draw(svg); });
+    return;
+  }
   if (!prim.shaded) {
     var fill = rgbStr(mixRGB(cols.bg, cols.accent, 0.42));
     prim.faces.forEach(function (f) {
@@ -1398,7 +1455,8 @@ function drawView(isDom) {
   if (state.show.figure) {
     if (nIn === 2) prims.push({ t: "fig2d", M: M, fo: state.fo });
     else {
-      meshPrim = { t: "mesh", verts: HOUSE.verts.map(function (p) { return matVec(M, p); }), faces: HOUSE.faces, shaded: out === 3 && rank === 3, detSign: detSign(M), extras: [] };
+      meshPrim = { t: "mesh", verts: HOUSE.verts.map(function (p) { return matVec(M, p); }), faces: HOUSE.faces, shaded: out === 3 && rank === 3, detSign: detSign(M), extras: [],
+                   domVerts: HOUSE.verts, flat: (rank === 2 && !(out === 3 && rank === 3)) ? flatSide(M, out, ctx.Q) : null };
       prims.push(meshPrim);
     }
   }
