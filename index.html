@@ -1012,7 +1012,7 @@ var FIGURE = '<path class="figsolid" fill-rule="evenodd" d="M0.514 0.4C0.506 0.4
 var HOUSE = (function () {
   var V = [], F = [];
   var C = { wall: "#e6d8b8", roof: "#b5523a", chimney: "#8d4b3b", cap: "#8a8a8a", door: "#6b4423", frame: "#f4f0e4",
-            glass: "#8fc1e3", step: "#9a9a9a", floor: "#6f6a60" };
+            glass: "#8fc1e3", step: "#9a9a9a", floor: "#6f6a60", panel: "#5a3719", knob: "#d9b04a" };
   function v(x, y, z) { V.push([x, y, z]); return V.length - 1; }
   function face(idx, color, extra) { var f = { v: idx, color: color }; if (extra) for (var k in extra) f[k] = extra[k]; F.push(f); return F.length - 1; }
   function texture(ids, tex) { ids.forEach(function (i) { F[i].tex = tex; }); }
@@ -1072,6 +1072,9 @@ var HOUSE = (function () {
   /* door with frame, step, windows on every wall */
   decal("front", 2.25, 2.75, 0, 0.85, C.frame, walls.front);
   decal("front", 2.3, 2.7, 0, 0.8, C.door, walls.front);
+  decal("front", 2.35, 2.65, 0.45, 0.73, C.panel, walls.front);   /* door panels and knob */
+  decal("front", 2.35, 2.65, 0.07, 0.37, C.panel, walls.front);
+  decal("front", 2.62, 2.66, 0.39, 0.43, C.knob, walls.front);
   box(2.25, 2.75, y0 - 0.2, y0, 0, 0.08, C.step);
   window_("front", 1.75, 2.1, 0.5, 0.9, walls.front);
   window_("front", 2.95, 3.3, 0.5, 0.9, walls.front);
@@ -1345,7 +1348,7 @@ function splitPoly(poly, n, k) {
       front.push(m); back.push(m);
     }
   }
-  function mk(ps) { return ps.length >= 3 ? { pts: ps, f: poly.f, frame: poly.frame, n: poly.n } : null; }
+  function mk(ps) { return ps.length >= 3 ? { pts: ps, f: poly.f, frame: poly.frame, n: poly.n, orig: poly.orig || poly } : null; }
   return { front: mk(front), back: mk(back) };
 }
 function buildBSP(polys) {
@@ -1419,16 +1422,61 @@ function textureLines(poly) {
   });
   return out;
 }
-/* prepare a mesh: polygons with frames, the BSP tree, texture lines */
+/* Edges worth drawing: an edge of a face is a crease if some other face
+ * sharing it (by position) is not coplanar, or a boundary if nothing shares
+ * it (decal outlines, the chimney base).  Edges between coplanar faces (a
+ * wall and its gable) and edges created by BSP splits are never drawn. */
+function creaseEdges(polys) {
+  function key(p) { return p.map(function (x) { return Math.round(x * 1e5); }).join(","); }
+  var shared = {};
+  polys.forEach(function (q) {
+    q.pts.forEach(function (a, i) {
+      var b = q.pts[(i + 1) % q.pts.length], ka = key(a), kb = key(b), k = ka < kb ? ka + "|" + kb : kb + "|" + ka;
+      (shared[k] = shared[k] || []).push(q);
+    });
+  });
+  polys.forEach(function (q) {
+    q.creases = [];
+    q.pts.forEach(function (a, i) {
+      var b = q.pts[(i + 1) % q.pts.length], ka = key(a), kb = key(b), k = ka < kb ? ka + "|" + kb : kb + "|" + ka;
+      var others = shared[k].filter(function (o) { return o !== q; });
+      var draw = !others.length || others.some(function (o) { return Math.abs(dot(o.n, q.n)) < 1 - 1e-4; });
+      if (draw) q.creases.push([a, b]);
+    });
+  });
+}
+/* the edges of a piece that lie along a crease of its original face */
+function pieceEdges(piece, original) {
+  var out = [], N = piece.pts.length;
+  function onSeg(p, A, B) {
+    var AB = add(B, scale(A, -1)), L2 = dot(AB, AB); if (L2 < 1e-18) return false;
+    var t = dot(add(p, scale(A, -1)), AB) / L2;
+    if (t < -1e-6 || t > 1 + 1e-6) return false;
+    var proj = add(A, scale(AB, t));
+    return norm(add(p, scale(proj, -1))) < 1e-6;
+  }
+  for (var i = 0; i < N; i++) {
+    var a = piece.pts[i], b = piece.pts[(i + 1) % N];
+    for (var j = 0; j < original.creases.length; j++) {
+      var e = original.creases[j];
+      if (onSeg(a, e[0], e[1]) && onSeg(b, e[0], e[1])) { out.push([a, b]); break; }
+    }
+  }
+  return out;
+}
+/* prepare a mesh: polygons with frames, crease edges, the BSP tree, texture lines */
 function prepareMesh(model) {
   if (model.bsp) return model;
   var polys = model.faces.map(function (f) {
     var pts = f.v.map(function (i) { return model.verts[i]; }), n = polyNormal(pts);
     var U = unit(add(pts[1], scale(pts[0], -1))), V = n && U ? unit(cross3(n, U)) : null;
-    return { pts: pts, f: f, n: n || [0, 0, 1], frame: { p0: pts[0], U: U || [1, 0, 0], V: V || [0, 0, 1] } };
+    var q = { pts: pts, f: f, n: n || [0, 0, 1], frame: { p0: pts[0], U: U || [1, 0, 0], V: V || [0, 0, 1] } };
+    q.orig = q;
+    return q;
   });
+  creaseEdges(polys);
   model.bsp = buildBSP(polys);
-  traverseBSP(model.bsp, [0, 0, 1], []).forEach(function (q) { q.lines = textureLines(q); });
+  traverseBSP(model.bsp, [0, 0, 1], []).forEach(function (q) { q.lines = textureLines(q); q.edges = pieceEdges(q, q.orig); });
   return model;
 }
 /* Draw a mesh under the map M.  mode "shaded": c = A^-1 d gives both the
@@ -1495,7 +1543,12 @@ function renderMesh(ctx, prim) {
     } else lam = 0.45 + 0.55 * Math.abs(dot(q.n, kh));
     var fillc = f.color ? rgbStr(litColor(f.color, lam)) : rgbStr(mixRGB(cols.bg, cols.accent, 0.2 + 0.5 * lam));
     var strokec = f.color ? edgeColor(f.color) : rgbStr(cols.accent);
-    el("polygon", { points: pv.map(function (z) { return z.x + "," + z.y; }).join(" "), fill: fillc, stroke: strokec, "stroke-width": f.decalOf !== undefined ? 0.5 : 0.8, "class": "mesh" }, svg);
+    el("polygon", { points: pv.map(function (z) { return z.x + "," + z.y; }).join(" "), fill: fillc, stroke: fillc, "stroke-width": 0.6, "class": "mesh" }, svg);
+    if (q.edges && q.edges.length) {
+      var de = "";
+      q.edges.forEach(function (sg) { var e1 = pix(sg[0]), e2 = pix(sg[1]); de += "M" + e1.x.toFixed(1) + " " + e1.y.toFixed(1) + "L" + e2.x.toFixed(1) + " " + e2.y.toFixed(1); });
+      el("path", { d: de, fill: "none", stroke: strokec, "stroke-width": f.decalOf !== undefined ? 0.5 : 0.8, "stroke-linecap": "round" }, svg);
+    }
     if (q.lines && q.lines.length) {
       var d = "";
       q.lines.forEach(function (sg) { var p1 = pix(sg[0]), p2 = pix(sg[1]); d += "M" + p1.x.toFixed(1) + " " + p1.y.toFixed(1) + "L" + p2.x.toFixed(1) + " " + p2.y.toFixed(1); });
