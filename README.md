@@ -16,8 +16,11 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
   expressions (`sqrt(3)/2`, `2pi`, `1 - sqrt(2)`); they display as
   typeset LaTeX after **Map**.
 - Example buttons fill in a fresh rotation, dilation, reflection, shear,
-  projection onto a line, or random integer matrix, with a one-line
-  description of the map.
+  projection, or random integer matrix for the current size. In 3D the
+  rotation is about a coordinate axis, the reflection is across a plane,
+  and the projection is onto a plane or a line; the 3 × 2 and 2 × 3 sizes
+  use the 3D example composed with the standard inclusion of the plane or
+  the projection that drops the z-coordinate.
 - Domain and codomain side by side. Toggles: a figure (a running figure
   in 2D, a small house in 3D), the unit circle or sphere, a lattice spanned
   by *u*, *v* (and *w* in 3D) with the fundamental parallelogram or

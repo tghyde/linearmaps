@@ -733,7 +733,6 @@ function setDims(m, n) {
   $("codTitle").textContent = "Codomain ℝ" + sup[m];
   $("circleLbl").textContent = n === 3 ? "Unit sphere" : "Unit circle";
   $("swW").hidden = n !== 3;
-  document.querySelectorAll("[data-preset]").forEach(function (b) { b.disabled = !is2x2(); });
   renderVecTools();
   drawAll();
 }
@@ -760,6 +759,14 @@ function freshPick(kind, list, key) {
 }
 function preset(kind) {
   var E;
+  if (!is2x2()) {
+    /* cropping a 3 x 3 example to 3 x 2 or 2 x 3 can lose its interesting
+     * entry (a shear in a dropped column, a projection onto the z-axis);
+     * retry until the result is neither zero nor the plain inclusion */
+    var tries = 0;
+    do { E = preset3(kind); tries++; } while (tries < 30 && !is2x2() && state.m !== state.n && (isZeroE(E) || isInclusionE(E)));
+    setEntries(E); doMap(); return;
+  }
   if (kind === "rotation") {
     var sign = pick([1, 1, -1]);
     var deg = freshPick("rotation", Object.keys(ROT).map(Number), function (d) { return d; });
@@ -786,6 +793,45 @@ function preset(kind) {
   }
   setEntries(E);
   doMap();
+}
+/* 3 x 3 examples; the 3 x 2 and 2 x 3 sizes take the first two columns or
+ * rows, i.e. the 3D example composed with the standard inclusion of the
+ * plane or the projection that drops the z-coordinate. */
+var NORMALS = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, -1, 0], [1, 0, 1], [0, 1, 1], [1, 0, -1], [0, 1, -1], [1, 1, 1]];
+function isZeroE(E) { return E.every(function (r) { return r.every(function (x) { return parseEntry(x).val === 0; }); }); }
+function isInclusionE(E) { return E.every(function (r, i) { return r.every(function (x, j) { return parseEntry(x).val === (i === j ? 1 : 0); }); }); }
+function preset3(kind) {
+  var E = [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]], i, j, nv, q;
+  function outer(n, mult, diag) {   /* entries (diag*delta_ij + mult*n_i n_j) / |n|^2 as strings */
+    var qq = n[0] * n[0] + n[1] * n[1] + n[2] * n[2], M = [];
+    for (var a = 0; a < 3; a++) { var row = []; for (var b = 0; b < 3; b++) row.push(fracStr((a === b ? diag * qq : 0) + mult * n[a] * n[b], qq)); M.push(row); }
+    return M;
+  }
+  if (kind === "rotation") {
+    var axis = pick([0, 1, 2]), sign = pick([1, 1, -1]);
+    var deg = freshPick("rotation3", Object.keys(ROT).map(Number), function (d) { return d; });
+    var c = ROT[deg][0], sn = ROT[deg][1];
+    if (sign < 0) sn = negStr(sn);
+    var a1 = (axis + 1) % 3, a2 = (axis + 2) % 3;   /* rotation in the plane of the other two axes */
+    E[a1][a1] = c; E[a1][a2] = negStr(sn); E[a2][a1] = sn; E[a2][a2] = c;
+  } else if (kind === "dilation") {
+    var k = freshPick("dilation3", ["2", "3", "1/2", "3/2", "-1", "-2", "1/3"], String);
+    E = [[k, "0", "0"], ["0", k, "0"], ["0", "0", k]];
+  } else if (kind === "reflection") {
+    nv = freshPick("reflection3", NORMALS, String);
+    E = outer(nv, -2, 1);
+  } else if (kind === "shear") {
+    i = pick([0, 1, 2]); j = pick([0, 1, 2].filter(function (x) { return x !== i; }));
+    E[i][j] = freshPick("shear3", ["1", "2", "-1", "1/2", "-2", "3/2"], String);
+  } else if (kind === "projection") {
+    nv = freshPick("projection3", NORMALS, String);
+    E = Math.random() < 0.67 ? outer(nv, -1, 1) : outer(nv, 1, 0);   /* onto the plane normal to n, or onto the line along n */
+  } else {
+    do {
+      E = E.map(function (r) { return r.map(function () { return String(Math.floor(Math.random() * 7) - 3); }); });
+    } while (E.every(function (r) { return r.every(function (x) { return x === "0"; }); }));
+  }
+  return E.slice(0, state.m).map(function (r) { return r.slice(0, state.n); });
 }
 
 /* ===================== lattice vector editor ===================== */
