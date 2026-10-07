@@ -1281,8 +1281,9 @@ function drawGridAxes(ctx) {
   }
 }
 function transformAttr(P, M) {
-  /* math (x, y) -> pixel: X = c + s(ax + by), Y = c - s(cx + dy) */
-  return "matrix(" + [P.s * M[0][0], -P.s * M[1][0], P.s * M[0][1], -P.s * M[1][1], P.c, P.c].join(" ") + ")";
+  /* math (x, y) -> pixel: X = ox + s(ax + by), Y = oy - s(cx + dy), with (ox, oy) the panned origin */
+  var o = P.px(0, 0);
+  return "matrix(" + [P.s * M[0][0], -P.s * M[1][0], P.s * M[0][1], -P.s * M[1][1], o[0], o[1]].join(" ") + ")";
 }
 function clampPt(p) { return [Math.min(VB - 6, Math.max(6, p[0])), Math.min(VB - 4, Math.max(10, p[1]))]; }
 function labelEl(svg, pos, cls, main, sub) {
