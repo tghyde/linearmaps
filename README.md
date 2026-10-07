@@ -26,10 +26,10 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
   by *u*, *v* (and *w* in 3D) with the fundamental parallelogram or
   parallelepiped shaded and lines colored by direction, the standard basis
   with the unit square or cube, and the background grid.
-- In 2D, drag the tips of *u* and *v* (hold Shift to snap to half-units)
-  and drag the figure around; the codomain follows live. The vectors can
-  also be typed: click their typeset form, edit, press Enter. Clicking the
-  typeset matrix reopens the matrix editor.
+- In 2D, drag the tips of *u* and *v* (hold Shift to snap to half-units);
+  the codomain follows live. The vectors can also be typed: click their
+  typeset form, edit, press Enter. Clicking the typeset matrix reopens the
+  matrix editor.
 - 2D views pan by dragging empty space and zoom about the cursor with the
   scroll wheel or trackpad (the +/− buttons zoom too); 3D views share an
   orbit camera, so dragging rotates. Double-click a view to reset it.

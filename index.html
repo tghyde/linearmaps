@@ -285,7 +285,6 @@ svg.plane.dragging { cursor: grabbing; }
 .plane .head { stroke: none; }
 .plane .hit { cursor: grab; fill: transparent; stroke: none; pointer-events: all; }
 .plane .uvsq { fill: var(--vvec); fill: color-mix(in srgb, var(--uvec), var(--vvec)); fill-opacity: .14; stroke: none; }
-#svgDom .figgroup { cursor: move; }
 #matTex { cursor: pointer; }
 #matTex:hover { background: var(--hover-bg); }
 .plane .lbl { font-family: var(--font-body); font-style: italic; font-size: 14px; }
@@ -578,7 +577,6 @@ var state = {
   A: null,       /* numeric m x n matrix once mapped */
   Atex: null,    /* matching LaTeX entries */
   vec: { u: ["1", "0", "0"], v: ["0", "1", "0"], w: ["0", "0", "1"] },  /* lattice vectors, as entered */
-  fo: [0, 0],    /* where the 2D figure has been dragged to */
   show: { figure: true, circle: false, lattice: false, basis: false, grid: true },
   Wd: 5, Wc: 5,  /* half-widths of the domain and codomain windows */
   pan: { d: [0, 0], c: [0, 0] },   /* window centres of the 2D views */
@@ -1666,7 +1664,7 @@ function renderPrims(ctx, prims) {
       case "fig2d": {
         /* a planar figure: the whole map (and, in 3D, the camera) is one 2x2 matrix */
         var B = ctx.out === 3 ? matMul(ctx.Q.slice(0, 2), pr.M) : pr.M;
-        var g = el("g", { "class": "figgroup", transform: transformAttr(ctx.P, B) + " translate(" + pr.fo[0] + " " + pr.fo[1] + ")" }, svg);
+        var g = el("g", { "class": "figgroup", transform: transformAttr(ctx.P, B) }, svg);
         g.innerHTML = FIGURE;
         break;
       }
@@ -1708,7 +1706,7 @@ function drawView(isDom) {
 
   var meshPrim = null;
   if (state.show.figure) {
-    if (nIn === 2) prims.push({ t: "fig2d", M: M, fo: state.fo });
+    if (nIn === 2) prims.push({ t: "fig2d", M: M });
     else {
       meshPrim = { t: "mesh", model: HOUSE, M: M, extras: [], mode: "sil", c: null, k: null };
       if (out === 3 && rank === 3) { meshPrim.mode = "shaded"; meshPrim.c = solve3(M, ctx.Q[2]); }
@@ -1788,15 +1786,7 @@ function setupPointer() {
             if (d < bd) { bd = d; best = k; }
           });
         }
-        var onFig = false;
-        if (isDom && state.n === 2 && state.show.figure) {
-          /* the figure is thin, so anything inside its on-screen box grabs it */
-          var fg = svg.querySelector(".figgroup"), fb = fg && fg.getBoundingClientRect();
-          onFig = (ev.target.closest && ev.target.closest(".figgroup")) ||
-                  (fb && ev.clientX >= fb.left - 4 && ev.clientX <= fb.right + 4 && ev.clientY >= fb.top - 4 && ev.clientY <= fb.bottom + 4);
-        }
         if (best) drag = { kind: best, svg: svg };
-        else if (onFig) drag = { kind: "fig", svg: svg, at: P.math(pt[0], pt[1]), fo: state.fo.slice() };
         else drag = { kind: "pan", svg: svg, key: pk, start: pt, ctr: state.pan[pk].slice(), s: P.s };
       }
       svg.setPointerCapture(ev.pointerId);
@@ -1819,11 +1809,6 @@ function setupPointer() {
         return;
       }
       var P = makeP(state.Wd, state.pan.d), m = P.math(pt[0], pt[1]);
-      if (drag.kind === "fig") {
-        state.fo = [drag.fo[0] + m[0] - drag.at[0], drag.fo[1] + m[1] - drag.at[1]];
-        drawAll(); updateHashSoon();
-        return;
-      }
       /* free movement by default; Shift snaps to half-units */
       var snap = ev.shiftKey ? 2 : 100;
       var x = Math.round(m[0] * snap) / snap, y = Math.round(m[1] * snap) / snap;
@@ -1873,7 +1858,7 @@ function updateHash() {
   if (hashTimer) { clearTimeout(hashTimer); hashTimer = null; }
   var sh = state.show;
   var o = { v: 2, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0,
-            vec: [state.vec.u, state.vec.v, state.vec.w], f: state.fo.map(r3),
+            vec: [state.vec.u, state.vec.v, state.vec.w],
             s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid].map(Number),
             w: [r3(state.Wd), r3(state.Wc)], cam: [r3(state.cam.yaw), r3(state.cam.phi)],
             pan: [state.pan.d.map(r3), state.pan.c.map(r3)] };
@@ -1908,7 +1893,6 @@ function loadHash() {
         if (Array.isArray(w) && w.length === 3 && w.every(function (x) { return typeof x === "string" && parseEntry(x); })) state.vec[k] = w.slice();
       });
     }
-    if (Array.isArray(o.f) && o.f.length === 2 && isFinite(o.f[0]) && isFinite(o.f[1])) state.fo = [Number(o.f[0]), Number(o.f[1])];
     if (Array.isArray(o.s) && o.s.length === 5) {
       ["figure", "circle", "lattice", "basis", "grid"].forEach(function (k, i) { state.show[k] = !!o.s[i]; });
     }
