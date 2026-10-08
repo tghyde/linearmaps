@@ -1260,21 +1260,26 @@ function pxOf(ctx, p) { var q = projPt(ctx, p); return [q.x, q.y]; }
 function drawGridAxes(ctx) {
   var P = ctx.P, W = ctx.W, svg = ctx.svg, step = gridStep(W), k, a, b, q;
   if (ctx.out === 3) {
+    /* everything in the plane z = 0 is collected; it is either drawn now or
+     * handed to the mesh renderer as a splitting plane */
+    var segs = [];
     if (state.show.grid) {
       for (k = -Math.floor(W / step) * step; k <= W + 1e-9; k += step) {
         if (Math.abs(k) < 1e-9) continue;
-        a = pxOf(ctx, [k, -W, 0]); b = pxOf(ctx, [k, W, 0]);
-        el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
-        a = pxOf(ctx, [-W, k, 0]); b = pxOf(ctx, [W, k, 0]);
-        el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "grid" }, svg);
+        segs.push({ a: [k, -W, 0], b: [k, W, 0], cls: "grid" });
+        segs.push({ a: [-W, k, 0], b: [W, k, 0], cls: "grid" });
       }
     }
+    segs.push({ a: [-W, 0, 0], b: [W, 0, 0], cls: "axis" });
+    segs.push({ a: [0, -W, 0], b: [0, W, 0], cls: "axis" });
+    a = pxOf(ctx, [0, 0, -W]); b = pxOf(ctx, [0, 0, W]);
+    el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "axis" }, svg);
     [[1, 0, 0], [0, 1, 0], [0, 0, 1]].forEach(function (e, i) {
-      a = pxOf(ctx, scale(e, -W)); b = pxOf(ctx, scale(e, W));
-      el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": "axis" }, svg);
       var l = pxOf(ctx, scale(e, W * 1.04));
       el("text", { x: l[0], y: l[1] + 5, "text-anchor": "middle", "class": "axlbl" }, svg).textContent = ["x", "y", "z"][i];
     });
+    ctx.gridSegs = segs;
+    if (!ctx.deferGrid) drawSegs(ctx, segs);
     return;
   }
   var bx = P.box;
@@ -1305,6 +1310,12 @@ function drawGridAxes(ctx) {
       el("text", { x: q[0] - 4, y: q[1] + 3, "text-anchor": "end", "class": "ticklabel" }, svg).textContent = lab;
     }
   }
+}
+function drawSegs(ctx, segs) {
+  segs.forEach(function (sg) {
+    var a = pxOf(ctx, sg.a), b = pxOf(ctx, sg.b);
+    el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "class": sg.cls }, ctx.svg);
+  });
 }
 function transformAttr(P, M) {
   /* math (x, y) -> pixel: X = ox + s(ax + by), Y = oy - s(cx + dy), with (ox, oy) the panned origin */
@@ -1531,16 +1542,29 @@ function renderMesh(ctx, prim) {
     (prim.extras || []).forEach(function (x) {
       var frontOf = [], behindOf = [];
       items.forEach(function (F, idx) {
-        var poly = F.pix.map(function (z) { return [z.x, z.y]; }), sample = null, k;
-        var cx = 0, cy = 0; poly.forEach(function (z) { cx += z[0]; cy += z[1]; }); cx /= poly.length; cy /= poly.length;
-        if (x.nearDepth(cx, cy) !== null) sample = [cx, cy];
-        else if (pointInPoly(x.center[0], x.center[1], poly)) sample = x.center;
-        else {
-          for (k = 0; k < poly.length && !sample; k++) if (x.nearDepth(poly[k][0], poly[k][1]) !== null) sample = poly[k];
-          for (k = 0; k < x.outlinePx.length && !sample; k += 3) if (pointInPoly(x.outlinePx[k][0], x.outlinePx[k][1], poly)) sample = x.outlinePx[k];
+        if (F.extra) return;
+        var poly = F.pix.map(function (z) { return [z.x, z.y]; }), sample = null, sd = null, k;
+        if (x.kind === "line") {
+          /* where the line crosses this face on screen, compare depths */
+          var far = 1e4, dx = x.pb.x - x.pa.x, dy = x.pb.y - x.pa.y, L = Math.hypot(dx, dy); if (L < 1e-9) return;
+          var area = 0; for (k = 0; k < poly.length; k++) { var p1 = poly[k], p2 = poly[(k + 1) % poly.length]; area += p1[0] * p2[1] - p2[0] * p1[1]; }
+          var ccw = area < 0 ? poly.slice().reverse() : poly;
+          var cs = clipSeg2([x.pa.x - dx / L * far, x.pa.y - dy / L * far], [x.pb.x + dx / L * far, x.pb.y + dy / L * far], ccw);
+          if (!cs) return;
+          sample = [(cs[0][0] + cs[1][0]) / 2, (cs[0][1] + cs[1][1]) / 2];
+          var t = ((sample[0] - x.pa.x) * dx + (sample[1] - x.pa.y) * dy) / (L * L);
+          sd = x.pa.d + t * (x.pb.d - x.pa.d);
+        } else {
+          var cx = 0, cy = 0; poly.forEach(function (z) { cx += z[0]; cy += z[1]; }); cx /= poly.length; cy /= poly.length;
+          if (x.nearDepth(cx, cy) !== null) sample = [cx, cy];
+          else if (pointInPoly(x.center[0], x.center[1], poly)) sample = x.center;
+          else {
+            for (k = 0; k < poly.length && !sample; k++) if (x.nearDepth(poly[k][0], poly[k][1]) !== null) sample = poly[k];
+            for (k = 0; k < x.outlinePx.length && !sample; k += 3) if (pointInPoly(x.outlinePx[k][0], x.outlinePx[k][1], poly)) sample = x.outlinePx[k];
+          }
+          if (!sample) return;
+          sd = x.nearDepth(sample[0], sample[1]);
         }
-        if (!sample) return;
-        var sd = x.nearDepth(sample[0], sample[1]);
         if (sd === null) return;
         var a = F.pix[0], b = F.pix[1], cc = F.pix[2], fd = a.d;
         var det = (b.x - a.x) * (cc.y - a.y) - (cc.x - a.x) * (b.y - a.y);
@@ -1556,10 +1580,51 @@ function renderMesh(ctx, prim) {
       var before = items.filter(function (F, idx) { return idx < at && frontOf.indexOf(idx) < 0; });
       items = before.concat([{ extra: x }], early, items.slice(at));
     });
+    /* Splitting planes (the z = 0 grid, a mirror plane): pieces behind the
+     * plane, the plane, then pieces in front; the other planes' geometry is
+     * split by it so each part lands on the right side. */
+    var pix0 = pix;
+    function orderPlanes(list, planes) {
+      if (!planes.length) return list;
+      var P = planes[0], rest = planes.slice(1), nearSign = dot(P.n, ctx.Q[2]) >= 0 ? 1 : -1, farL = [], nearL = [];
+      list.forEach(function (F) {
+        if (F.extra) { nearL.push(F); return; }
+        var lo = Infinity, hi = -Infinity;
+        F.q.pts.forEach(function (p) { var d = dot(P.nDom, p); lo = Math.min(lo, d); hi = Math.max(hi, d); });
+        var allPos = lo >= -BSP_EPS, allNeg = hi <= BSP_EPS;
+        if (allPos && allNeg) { nearL.push(F); return; }
+        if (allPos || allNeg) { ((allPos ? 1 : -1) === nearSign ? nearL : farL).push(F); return; }
+        var cut = splitPoly(F.q, P.nDom, 0), ls = splitSegs(F.q.lines, P.nDom, 0), es = splitSegs(F.q.edges, P.nDom, 0);
+        [["front", 1], ["back", -1]].forEach(function (sd2) {
+          var piece = cut[sd2[0]]; if (!piece) return;
+          piece.lines = ls[sd2[0]]; piece.edges = es[sd2[0]];
+          (sd2[1] === nearSign ? nearL : farL).push({ q: piece, pix: piece.pts.map(pix0) });
+        });
+      });
+      var restFar = [], restNear = [];
+      rest.forEach(function (R) {
+        if (R.poly) {
+          var cp = splitPoly({ pts: R.poly }, P.n, 0);
+          if (cp.front) (nearSign === 1 ? restNear : restFar).push({ n: R.n, nDom: R.nDom, poly: cp.front.pts, cls: R.cls });
+          if (cp.back) (nearSign === 1 ? restFar : restNear).push({ n: R.n, nDom: R.nDom, poly: cp.back.pts, cls: R.cls });
+        } else {
+          var cs2 = splitSegs(R.segs, P.n, 0);
+          (nearSign === 1 ? restNear : restFar).push({ n: R.n, nDom: R.nDom, segs: cs2.front });
+          (nearSign === 1 ? restFar : restNear).push({ n: R.n, nDom: R.nDom, segs: cs2.back });
+        }
+      });
+      return orderPlanes(farL, restFar).concat([{ plane: P }], orderPlanes(nearL, restNear));
+    }
+    if (prim.planes && prim.planes.length) items = orderPlanes(items, prim.planes);
   }
   var light = unit([-0.35, -0.5, 0.8]);
   items.forEach(function (F) {
     if (F.extra) { F.extra.draw(svg); return; }
+    if (F.plane) {
+      if (F.plane.poly) el("polygon", { points: F.plane.poly.map(function (p) { var z = projPt(ctx, p); return z.x + "," + z.y; }).join(" "), "class": F.plane.cls }, svg);
+      else drawSegs(ctx, F.plane.segs);
+      return;
+    }
     var q = F.q, f = q.f, pv = F.pix, lam;
     if (prim.mode === "shaded") {
       var a = pv[0], b = pv[1], cc = pv[2];
@@ -1612,6 +1677,30 @@ function hemisphereRegions(c) {
     regions.push({ pts: g.concat(sArc), side: sgn });
   });
   return { outline: outline, regions: regions };
+}
+/* A straight line segment in 3D (codomain coordinates) that takes part in
+ * the painter's order: depth is linear along it. */
+function lineObject(ctx, a, b, cls) {
+  var pa = projPt(ctx, a), pb = projPt(ctx, b);
+  return {
+    kind: "line", cls: cls, pa: pa, pb: pb,
+    draw: function (svg) { el("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, "class": cls }, svg); }
+  };
+}
+/* split segments [[a, b], ...] (or {a, b, cls}) by the plane n . x = k */
+function splitSegs(segs, n, k) {
+  var front = [], back = [];
+  (segs || []).forEach(function (sg) {
+    var A = sg.a || sg[0], B = sg.b || sg[1], da = dot(n, A) - k, db = dot(n, B) - k;
+    function mk(P, Q) { return sg.a ? { a: P, b: Q, cls: sg.cls } : [P, Q]; }
+    if (da >= -BSP_EPS && db >= -BSP_EPS) front.push(sg);
+    else if (da <= BSP_EPS && db <= BSP_EPS) back.push(sg);
+    else {
+      var t = da / (da - db), m = add(A, scale(add(B, scale(A, -1)), t));
+      if (da > 0) { front.push(mk(A, m)); back.push(mk(m, B)); } else { back.push(mk(A, m)); front.push(mk(m, B)); }
+    }
+  });
+  return { front: front, back: back };
 }
 /* The solid image of the unit sphere under M, seen with visibility vector c
  * in the domain (c = A^{-1} d for an invertible map in 3D; the facing side of
@@ -1718,27 +1807,29 @@ function drawView(isDom) {
   svg.innerHTML = "";
   svg.classList.toggle("rot", out === 3 && (isDom || !!M));
   var ctx = { svg: svg, P: makeP(W, out === 2 ? state.pan[isDom ? "d" : "c"] : null), Q: out === 3 ? camera() : null, out: out, W: W };
+  var rank = M ? rowBasis(M).length : 0;
+  ctx.deferGrid = !!(M && out === 3 && nIn === 3 && rank === 3 && state.show.figure);   /* the shaded house orders the grid plane */
   drawGridAxes(ctx);
   if (!M) { note(svg, "Enter a matrix and press Map."); return; }
   var prims = [], i;
-  var rank = rowBasis(M).length;
   var pre = isDom ? "" : "A";
   var cols = ident(nIn).map(function (e) { return matVec(M, e); });          /* images of e_1..e_n */
   var vnames = ["u", "v", "w"].slice(0, nIn);
   var lv = vnames.map(function (k) { return matVec(M, vecVal(k)); });       /* images of u, v, w */
   var famCls = ["uvec", "vvec", "wvec"];
 
-  var inv = state.show.mirror ? involutionFixed(state.A) : null;
+  var inv = state.show.mirror ? involutionFixed(state.A) : null, mirrorLate = [], mirrorPlane = null, mirrorAxis = null;
+  function pullBack(nv) { return [0, 1, 2].map(function (j) { return M[0][j] * nv[0] + M[1][j] * nv[1] + M[2][j] * nv[2]; }); }   /* M^T n */
   if (inv && inv.n === nIn && out === nIn) {
     var R = W * 1.5, b0 = inv.basis[0];
     if (inv.dim === nIn - 1 && nIn === 2) {
       var ms = clipLine([0, 0], b0, ctx.P.box);
-      if (ms) prims.push({ t: "segment", a: [ms[0], ms[1]], b: [ms[2], ms[3]], cls: "mirror" });
+      if (ms) mirrorLate.push({ t: "segment", a: [ms[0], ms[1]], b: [ms[2], ms[3]], cls: "mirror" });
     } else if (inv.dim === 2) {
-      var b1 = inv.basis[1];
-      prims.push({ t: "polygon", pts: [add(scale(b0, -R), scale(b1, -R)), add(scale(b0, R), scale(b1, -R)), add(scale(b0, R), scale(b1, R)), add(scale(b0, -R), scale(b1, R))], cls: "mirrorplane" });
+      var b1 = inv.basis[1], nu = unit(cross3(b0, b1));
+      mirrorPlane = { n: nu, nDom: pullBack(nu), poly: [add(scale(b0, -R), scale(b1, -R)), add(scale(b0, R), scale(b1, -R)), add(scale(b0, R), scale(b1, R)), add(scale(b0, -R), scale(b1, R))], cls: "mirrorplane" };
     } else if (inv.dim === 1) {
-      prims.push({ t: "segment", a: scale(b0, -R), b: scale(b0, R), cls: "mirror" });
+      mirrorAxis = { a: scale(b0, -R), b: scale(b0, R) };
     }
   }
   if (state.show.basis) prims = prims.concat(boxFaces(cols, "usq"), boxEdges(cols, "usqedge"));
@@ -1788,6 +1879,17 @@ function drawView(isDom) {
       B.points.forEach(function (p) { prims.push({ t: "point", p: p, cls: "latpt", r: 2 }); });
     }
   }
+  var shadedMesh = meshPrim && meshPrim.mode === "shaded";
+  if (shadedMesh) {
+    meshPrim.planes = [];
+    if (ctx.deferGrid) meshPrim.planes.push({ n: [0, 0, 1], nDom: pullBack([0, 0, 1]), segs: ctx.gridSegs });
+    if (mirrorPlane) meshPrim.planes.push(mirrorPlane);
+  } else if (mirrorPlane) prims.unshift({ t: "polygon", pts: mirrorPlane.poly, cls: "mirrorplane" });
+  if (mirrorAxis) {
+    var axisObj = lineObject(ctx, mirrorAxis.a, mirrorAxis.b, "mirror");
+    if (shadedMesh) meshPrim.extras.push(axisObj); else prims.push({ t: "draw3", obj: axisObj });
+  }
+  prims = prims.concat(mirrorLate);
   var origin = cols[0].map(function () { return 0; });
   if (state.show.basis) cols.forEach(function (c, j) { prims.push({ t: "arrow", pts: [origin, c], cls: "basis", label: pre + "e", sub: String(j + 1), side: -1 }); });
   if (state.show.lattice) lv.forEach(function (c, j) { prims.push({ t: "arrow", pts: [origin, c], cls: famCls[j], label: pre + vnames[j], side: 1 }); });
