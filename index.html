@@ -1583,7 +1583,7 @@ function renderMesh(ctx, prim) {
           /* where this piece crosses the face on screen, compare depths */
           var dx = x.pb.x - x.pa.x, dy = x.pb.y - x.pa.y, L = Math.hypot(dx, dy); if (L < 1e-9) return;
           var cs = clipSeg2([x.pa.x, x.pa.y], [x.pb.x, x.pb.y], ccwPix(F.pix));
-          if (!cs || Math.hypot(cs[1][0] - cs[0][0], cs[1][1] - cs[0][1]) < 0.5) return;
+          if (!cs || Math.hypot(cs[1][0] - cs[0][0], cs[1][1] - cs[0][1]) < 1e-3) return;
           sample = [(cs[0][0] + cs[1][0]) / 2, (cs[0][1] + cs[1][1]) / 2];
           var t = ((sample[0] - x.pa.x) * dx + (sample[1] - x.pa.y) * dy) / (L * L);
           sd = x.pa.d + t * (x.pb.d - x.pa.d);
@@ -1599,12 +1599,17 @@ function renderMesh(ctx, prim) {
           sd = x.nearDepth(sample[0], sample[1]);
         }
         if (sd === null) return;
-        var a = F.pix[0], b = F.pix[1], cc = F.pix[2], fd = a.d;
+        /* depth of the face's plane at the sample point, clamped to the
+         * face's own depth range (a nearly edge-on face would otherwise
+         * extrapolate wildly) */
+        var a = F.pix[0], b = F.pix[1], cc = F.pix[2], dmin = Infinity, dmax = -Infinity, dsum = 0;
+        F.pix.forEach(function (z) { dmin = Math.min(dmin, z.d); dmax = Math.max(dmax, z.d); dsum += z.d; });
+        var fd = dsum / F.pix.length;
         var det = (b.x - a.x) * (cc.y - a.y) - (cc.x - a.x) * (b.y - a.y);
-        if (Math.abs(det) > 1e-6) {
+        if (Math.abs(det) > 1e-3) {
           var al = ((b.d - a.d) * (cc.y - a.y) - (cc.d - a.d) * (b.y - a.y)) / det;
           var be = ((cc.d - a.d) * (b.x - a.x) - (b.d - a.d) * (cc.x - a.x)) / det;
-          fd = a.d + al * (sample[0] - a.x) + be * (sample[1] - a.y);
+          fd = Math.max(dmin, Math.min(dmax, a.d + al * (sample[0] - a.x) + be * (sample[1] - a.y)));
         }
         (fd > sd ? frontOf : behindOf).push(idx);
       });
@@ -1621,7 +1626,19 @@ function renderMesh(ctx, prim) {
       if (!planes.length) return list;
       var P = planes[0], rest = planes.slice(1), nearSign = dot(P.n, ctx.Q[2]) >= 0 ? 1 : -1, farL = [], nearL = [];
       list.forEach(function (F) {
-        if (F.extra) { nearL.push(F); return; }
+        if (F.extra) {
+          var x = F.extra;
+          if (x.kind !== "line") { nearL.push(F); return; }   /* the sphere is centred on every plane through the origin */
+          var da = dot(P.n, x.a), db = dot(P.n, x.b);
+          if (da >= -BSP_EPS && db >= -BSP_EPS) { (nearSign === 1 ? nearL : farL).push(F); return; }
+          if (da <= BSP_EPS && db <= BSP_EPS) { (nearSign === -1 ? nearL : farL).push(F); return; }
+          var tt = da / (da - db), mid = add(x.a, scale(add(x.b, scale(x.a, -1)), tt));
+          var first = lineObject(ctx, x.a, mid, x.cls, x.dashOffset);
+          var second = lineObject(ctx, mid, x.b, x.cls, x.dashOffset + Math.hypot(first.pb.x - first.pa.x, first.pb.y - first.pa.y));
+          ((da > 0 ? 1 : -1) === nearSign ? nearL : farL).push({ extra: first });
+          ((da > 0 ? -1 : 1) === nearSign ? nearL : farL).push({ extra: second });
+          return;
+        }
         var lo = Infinity, hi = -Infinity;
         F.q.pts.forEach(function (p) { var d = dot(P.nDom, p); lo = Math.min(lo, d); hi = Math.max(hi, d); });
         var allPos = lo >= -BSP_EPS, allNeg = hi <= BSP_EPS;
@@ -1716,7 +1733,7 @@ function hemisphereRegions(c) {
 function lineObject(ctx, a, b, cls, dashOffset) {
   var pa = projPt(ctx, a), pb = projPt(ctx, b);
   return {
-    kind: "line", cls: cls, pa: pa, pb: pb, a: a, b: b,
+    kind: "line", cls: cls, pa: pa, pb: pb, a: a, b: b, dashOffset: dashOffset || 0,
     draw: function (svg) { el("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, "class": cls, "stroke-dashoffset": dashOffset ? -dashOffset : null }, svg); }
   };
 }
