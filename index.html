@@ -27,6 +27,7 @@
   --vvec: #2b64c4;
   --wvec: #2e8b57;
   --sph2: #d98e04;
+  --mir: #0f8b8d;
   --font-body: Charter, "Bitstream Charter", Georgia, "Times New Roman", serif;
   --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -48,6 +49,7 @@
     --vvec: #7ea6ef;
     --wvec: #6fcf97;
     --sph2: #f0b547;
+    --mir: #5fd0d3;
   }
 }
 :root[data-theme="dark"] {
@@ -66,6 +68,7 @@
   --vvec: #7ea6ef;
   --wvec: #6fcf97;
   --sph2: #f0b547;
+  --mir: #5fd0d3;
 }
 
 * { box-sizing: border-box; }
@@ -195,6 +198,7 @@ label.fld {
 }
 label.fld input[type="checkbox"] { accent-color: var(--accent); margin: 0; width: .95rem; height: .95rem; }
 label.fld.chk { cursor: pointer; color: var(--fg); }
+label.fld.chk[hidden], button.filebox[hidden] { display: none; }
 .setuprow { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: 0; }
 .setuprow .hint { margin: 0; }
 
@@ -264,6 +268,8 @@ svg.plane.dragging { cursor: grabbing; }
 .plane .circB { fill: var(--sph2); fill-opacity: .45; stroke: none; }
 .plane .sph { fill: none; stroke: var(--fg); stroke-width: .9; stroke-opacity: .3; }
 .plane .sphedge { fill: none; stroke: var(--alert); stroke-width: 1.3; }
+.plane .mirror { fill: none; stroke: var(--mir); stroke-width: 2; stroke-dasharray: 7 4; }
+.plane .mirrorplane { fill: var(--mir); fill-opacity: .16; stroke: var(--mir); stroke-width: 1.2; stroke-dasharray: 7 4; }
 .plane .sphfill { fill: var(--alert); fill-opacity: .45; stroke: var(--alert); stroke-width: 1.6; }
 .plane .axlbl { fill: var(--muted); font-family: var(--font-body); font-style: italic; font-size: 14px; }
 .plane .mesh { stroke-linejoin: round; }
@@ -369,6 +375,7 @@ footer.doc {
         <button class="filebox" data-preset="reflection">Reflection</button>
         <button class="filebox" data-preset="shear">Shear</button>
         <button class="filebox" data-preset="projection">Projection</button>
+        <button class="filebox" data-preset="lineinv" id="lineInvBtn" title="A half-turn about a line" hidden>Line inversion</button>
         <button class="filebox" data-preset="random">Random</button>
       </div>
     </div>
@@ -381,6 +388,7 @@ footer.doc {
         <label class="fld chk"><input type="checkbox" id="chkLattice"> Lattice <span class="swatch u" aria-hidden="true"></span><span class="swatch v" aria-hidden="true"></span><span class="swatch w" id="swW" aria-hidden="true" hidden></span></label>
         <label class="fld chk"><input type="checkbox" id="chkBasis"> Standard basis</label>
         <label class="fld chk"><input type="checkbox" id="chkGrid" checked> Grid</label>
+        <label class="fld chk" id="mirrorLbl" hidden><input type="checkbox" id="chkMirror" checked> <span id="mirrorTxt">Mirror</span></label>
       </div>
       <div id="latticeTools" hidden>
         <div class="vecrow" id="vecRow"></div>
@@ -577,7 +585,7 @@ var state = {
   A: null,       /* numeric m x n matrix once mapped */
   Atex: null,    /* matching LaTeX entries */
   vec: { u: ["1", "0", "0"], v: ["0", "1", "0"], w: ["0", "0", "1"] },  /* lattice vectors, as entered */
-  show: { figure: true, circle: false, lattice: false, basis: false, grid: true },
+  show: { figure: true, circle: false, lattice: false, basis: false, grid: true, mirror: true },
   Wd: 5, Wc: 5,  /* half-widths of the domain and codomain windows */
   pan: { d: [0, 0], c: [0, 0] },   /* window centres of the 2D views */
   cam: { yaw: -30 * DEG, phi: 25 * DEG }   /* shared orbit camera for 3D views */
@@ -738,6 +746,7 @@ function setDims(m, n) {
   $("domTitle").textContent = "Domain ℝ" + sup[n];
   $("codTitle").textContent = "Codomain ℝ" + sup[m];
   $("circleLbl").textContent = n === 3 ? "Unit sphere" : "Unit circle";
+  $("lineInvBtn").hidden = !(m === 3 && n === 3);
   $("swW").hidden = n !== 3;
   renderVecTools();
   drawAll();
@@ -765,6 +774,7 @@ function freshPick(kind, list, key) {
 }
 function preset(kind) {
   var E;
+  if (kind === "lineinv" && is2x2()) kind = "reflection";
   if (!is2x2()) {
     /* cropping a 3 x 3 example to 3 x 2 or 2 x 3 can lose its interesting
      * entry (a shear in a dropped column, a projection onto the z-axis);
@@ -829,6 +839,9 @@ function preset3(kind) {
   } else if (kind === "shear") {
     i = pick([0, 1, 2]); j = pick([0, 1, 2].filter(function (x) { return x !== i; }));
     E[i][j] = freshPick("shear3", ["1", "2", "-1", "1/2", "-2", "3/2"], String);
+  } else if (kind === "lineinv") {
+    nv = freshPick("lineinv3", NORMALS, String);
+    E = outer(nv, 2, -1);   /* half-turn about the line along n: 2 n n^T / |n|^2 - I */
   } else if (kind === "projection") {
     nv = freshPick("projection3", NORMALS, String);
     E = Math.random() < 0.67 ? outer(nv, -1, 1) : outer(nv, 1, 0);   /* onto the plane normal to n, or onto the line along n */
@@ -981,6 +994,19 @@ function flatSide(M, out, Q) {
     side = det3([M[0], M[1], k]) < 0 ? -1 : 1;
   }
   return { k: k, side: side };
+}
+/* For an involution A (A^2 = I, A != +-I): an orthonormal basis of its fixed
+ * space, the +1 eigenspace = column space of A + I.  A reflection fixes a
+ * line (2D) or a plane (3D), its mirror; a line inversion fixes its axis. */
+function involutionFixed(A) {
+  if (!A || A.length !== A[0].length) return null;
+  var n = A.length, A2 = matMul(A, A), i, j;
+  for (i = 0; i < n; i++) for (j = 0; j < n; j++) if (Math.abs(A2[i][j] - (i === j ? 1 : 0)) > 1e-7) return null;
+  var cols = [];
+  for (j = 0; j < n; j++) { var c = []; for (i = 0; i < n; i++) c.push(A[i][j] + (i === j ? 1 : 0)); cols.push(c); }
+  var B = rowBasis(cols);
+  if (B.length === 0 || B.length === n) return null;
+  return { basis: B, dim: B.length, n: n };
 }
 /* orthonormal basis of the row space (Gram-Schmidt); its length is the rank */
 function rowBasis(M) {
@@ -1702,6 +1728,19 @@ function drawView(isDom) {
   var lv = vnames.map(function (k) { return matVec(M, vecVal(k)); });       /* images of u, v, w */
   var famCls = ["uvec", "vvec", "wvec"];
 
+  var inv = state.show.mirror ? involutionFixed(state.A) : null;
+  if (inv && inv.n === nIn && out === nIn) {
+    var R = W * 1.5, b0 = inv.basis[0];
+    if (inv.dim === nIn - 1 && nIn === 2) {
+      var ms = clipLine([0, 0], b0, ctx.P.box);
+      if (ms) prims.push({ t: "segment", a: [ms[0], ms[1]], b: [ms[2], ms[3]], cls: "mirror" });
+    } else if (inv.dim === 2) {
+      var b1 = inv.basis[1];
+      prims.push({ t: "polygon", pts: [add(scale(b0, -R), scale(b1, -R)), add(scale(b0, R), scale(b1, -R)), add(scale(b0, R), scale(b1, R)), add(scale(b0, -R), scale(b1, R))], cls: "mirrorplane" });
+    } else if (inv.dim === 1) {
+      prims.push({ t: "segment", a: scale(b0, -R), b: scale(b0, R), cls: "mirror" });
+    }
+  }
   if (state.show.basis) prims = prims.concat(boxFaces(cols, "usq"), boxEdges(cols, "usqedge"));
   if (state.show.lattice) prims = prims.concat(boxFaces(lv, "uvsq"));
 
@@ -1761,6 +1800,9 @@ function drawAll() {
   drawView(true);
   drawView(false);
   $("latticeTools").hidden = !state.show.lattice;
+  var inv = involutionFixed(state.A);
+  $("mirrorLbl").hidden = !inv;
+  if (inv) $("mirrorTxt").textContent = inv.dim === inv.n - 1 ? "Mirror" : "Axis";
   refreshVecTex();
 }
 
@@ -1860,7 +1902,7 @@ function updateHash() {
   var sh = state.show;
   var o = { v: 2, m: state.m, n: state.n, e: state.entries, p: state.A ? 1 : 0,
             vec: [state.vec.u, state.vec.v, state.vec.w],
-            s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid].map(Number),
+            s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid, sh.mirror].map(Number),
             w: [r3(state.Wd), r3(state.Wc)], cam: [r3(state.cam.yaw), r3(state.cam.phi)],
             pan: [state.pan.d.map(r3), state.pan.c.map(r3)] };
   try { history.replaceState(null, "", "#" + b64url(JSON.stringify(o))); } catch (e) {}
@@ -1894,8 +1936,8 @@ function loadHash() {
         if (Array.isArray(w) && w.length === 3 && w.every(function (x) { return typeof x === "string" && parseEntry(x); })) state.vec[k] = w.slice();
       });
     }
-    if (Array.isArray(o.s) && o.s.length === 5) {
-      ["figure", "circle", "lattice", "basis", "grid"].forEach(function (k, i) { state.show[k] = !!o.s[i]; });
+    if (Array.isArray(o.s) && o.s.length >= 5) {
+      ["figure", "circle", "lattice", "basis", "grid", "mirror"].forEach(function (k, i) { if (i < o.s.length) state.show[k] = !!o.s[i]; });
     }
     if (Array.isArray(o.w)) {
       if (isFinite(o.w[0])) state.Wd = clampW(Number(o.w[0]));
@@ -1963,7 +2005,7 @@ function init() {
   });
 
   /* options */
-  [["chkFigure", "figure"], ["chkCircle", "circle"], ["chkLattice", "lattice"], ["chkBasis", "basis"], ["chkGrid", "grid"]].forEach(function (pair) {
+  [["chkFigure", "figure"], ["chkCircle", "circle"], ["chkLattice", "lattice"], ["chkBasis", "basis"], ["chkGrid", "grid"], ["chkMirror", "mirror"]].forEach(function (pair) {
     var box = $(pair[0]);
     box.addEventListener("change", function () { state.show[pair[1]] = box.checked; drawAll(); updateHash(); });
   });
@@ -1988,8 +2030,8 @@ function init() {
   var E = state.entries;
   setDims(state.m, state.n);
   state.entries = E; buildGrid();
-  ["chkFigure", "chkCircle", "chkLattice", "chkBasis", "chkGrid"].forEach(function (id, i) {
-    $(id).checked = state.show[["figure", "circle", "lattice", "basis", "grid"][i]];
+  ["chkFigure", "chkCircle", "chkLattice", "chkBasis", "chkGrid", "chkMirror"].forEach(function (id, i) {
+    $(id).checked = state.show[["figure", "circle", "lattice", "basis", "grid", "mirror"][i]];
   });
   if (loaded && loaded.mapped) doMap(); else drawAll();
 }

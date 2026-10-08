@@ -35,6 +35,10 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
   orbit camera, so dragging rotates. Double-click a view to reset it.
 - The unit circle is a filled disc and the sphere a solid ball, each with
   one half red and the other amber so rotations are easy to read.
+- When the matrix is a reflection, a **Mirror** toggle shows the mirror
+  line (2D) or plane (3D) in both views; for a line inversion (the 3 × 3
+  **Line inversion** example, a half-turn about a line) it shows the axis.
+  The toggle appears for any involution with a fixed line or plane.
 - Maps that flatten space (a 3 × 2 matrix, or a singular 3 × 3 one) draw the
   figure as a flat silhouette and the sphere as the filled ellipse it maps
   onto. Singular 2 × 2 maps collapse the lattice to a line.
