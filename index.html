@@ -1555,11 +1555,23 @@ function renderMesh(ctx, prim) {
         var hit = projPt(ctx, add(x.a, scale(dvec, t)));
         if (pointInPoly(hit.x, hit.y, F.pix.map(function (z) { return [z.x, z.y]; }))) ts.push(t);
       });
+      /* also cut where the line's projection enters or leaves a face, so
+       * that along each piece every face is wholly in front or behind */
+      var dxl = x.pb.x - x.pa.x, dyl = x.pb.y - x.pa.y, L2 = dxl * dxl + dyl * dyl;
+      if (L2 > 1e-9) items.forEach(function (F) {
+        if (F.extra) return;
+        var cs = clipSeg2([x.pa.x, x.pa.y], [x.pb.x, x.pb.y], ccwPix(F.pix));
+        if (!cs) return;
+        cs.forEach(function (q) { var t = ((q[0] - x.pa.x) * dxl + (q[1] - x.pa.y) * dyl) / L2; if (t > 1e-6 && t < 1 - 1e-6) ts.push(t); });
+      });
       ts.sort(function (u, v) { return u - v; });
+      var cum = 0;
       for (var i = 0; i + 1 < ts.length; i++) {
         if (ts[i + 1] - ts[i] < 1e-6) continue;
         var pa = add(x.a, scale(add(x.b, scale(x.a, -1)), ts[i])), pb = add(x.a, scale(add(x.b, scale(x.a, -1)), ts[i + 1]));
-        extras.push(lineObject(ctx, pa, pb, x.cls));
+        var piece = lineObject(ctx, pa, pb, x.cls, cum);
+        cum += Math.hypot(piece.pb.x - piece.pa.x, piece.pb.y - piece.pa.y);
+        extras.push(piece);
       }
     });
     extras.forEach(function (x) {
@@ -1568,12 +1580,10 @@ function renderMesh(ctx, prim) {
         if (F.extra) return;
         var poly = F.pix.map(function (z) { return [z.x, z.y]; }), sample = null, sd = null, k;
         if (x.kind === "line") {
-          /* where the line crosses this face on screen, compare depths */
-          var far = 1e4, dx = x.pb.x - x.pa.x, dy = x.pb.y - x.pa.y, L = Math.hypot(dx, dy); if (L < 1e-9) return;
-          var area = 0; for (k = 0; k < poly.length; k++) { var p1 = poly[k], p2 = poly[(k + 1) % poly.length]; area += p1[0] * p2[1] - p2[0] * p1[1]; }
-          var ccw = area < 0 ? poly.slice().reverse() : poly;
-          var cs = clipSeg2([x.pa.x - dx / L * far, x.pa.y - dy / L * far], [x.pb.x + dx / L * far, x.pb.y + dy / L * far], ccw);
-          if (!cs) return;
+          /* where this piece crosses the face on screen, compare depths */
+          var dx = x.pb.x - x.pa.x, dy = x.pb.y - x.pa.y, L = Math.hypot(dx, dy); if (L < 1e-9) return;
+          var cs = clipSeg2([x.pa.x, x.pa.y], [x.pb.x, x.pb.y], ccwPix(F.pix));
+          if (!cs || Math.hypot(cs[1][0] - cs[0][0], cs[1][1] - cs[0][1]) < 0.5) return;
           sample = [(cs[0][0] + cs[1][0]) / 2, (cs[0][1] + cs[1][1]) / 2];
           var t = ((sample[0] - x.pa.x) * dx + (sample[1] - x.pa.y) * dy) / (L * L);
           sd = x.pa.d + t * (x.pb.d - x.pa.d);
@@ -1703,12 +1713,17 @@ function hemisphereRegions(c) {
 }
 /* A straight line segment in 3D (codomain coordinates) that takes part in
  * the painter's order: depth is linear along it. */
-function lineObject(ctx, a, b, cls) {
+function lineObject(ctx, a, b, cls, dashOffset) {
   var pa = projPt(ctx, a), pb = projPt(ctx, b);
   return {
     kind: "line", cls: cls, pa: pa, pb: pb, a: a, b: b,
-    draw: function (svg) { el("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, "class": cls }, svg); }
+    draw: function (svg) { el("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, "class": cls, "stroke-dashoffset": dashOffset ? -dashOffset : null }, svg); }
   };
+}
+function ccwPix(pix) {
+  var poly = pix.map(function (z) { return [z.x, z.y]; }), area = 0;
+  for (var k = 0; k < poly.length; k++) { var p1 = poly[k], p2 = poly[(k + 1) % poly.length]; area += p1[0] * p2[1] - p2[0] * p1[1]; }
+  return area < 0 ? poly.reverse() : poly;
 }
 /* split segments [[a, b], ...] (or {a, b, cls}) by the plane n . x = k */
 function splitSegs(segs, n, k) {
