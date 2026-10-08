@@ -1539,7 +1539,30 @@ function renderMesh(ctx, prim) {
     .map(function (q) { return { q: q, pix: q.pts.map(pix) }; });
   if (prim.mode === "shaded") {
     /* solid extras (the sphere): compare with the near surface at an overlap point */
+    var extras = [];
     (prim.extras || []).forEach(function (x) {
+      if (x.kind !== "line") { extras.push(x); return; }
+      /* cut the line where it pierces a visible face, so that each piece is
+       * wholly in front of or behind every face it crosses on screen */
+      var ts = [0, 1];
+      items.forEach(function (F) {
+        if (F.extra) return;
+        var P0 = matVec(M, F.q.pts[0]), P1 = matVec(M, F.q.pts[1]), P2 = matVec(M, F.q.pts[2]);
+        var nrm = cross3(add(P1, scale(P0, -1)), add(P2, scale(P0, -1))), dvec = add(x.b, scale(x.a, -1)), den = dot(nrm, dvec);
+        if (Math.abs(den) < 1e-12) return;
+        var t = dot(nrm, add(P0, scale(x.a, -1))) / den;
+        if (t <= 1e-6 || t >= 1 - 1e-6) return;
+        var hit = projPt(ctx, add(x.a, scale(dvec, t)));
+        if (pointInPoly(hit.x, hit.y, F.pix.map(function (z) { return [z.x, z.y]; }))) ts.push(t);
+      });
+      ts.sort(function (u, v) { return u - v; });
+      for (var i = 0; i + 1 < ts.length; i++) {
+        if (ts[i + 1] - ts[i] < 1e-6) continue;
+        var pa = add(x.a, scale(add(x.b, scale(x.a, -1)), ts[i])), pb = add(x.a, scale(add(x.b, scale(x.a, -1)), ts[i + 1]));
+        extras.push(lineObject(ctx, pa, pb, x.cls));
+      }
+    });
+    extras.forEach(function (x) {
       var frontOf = [], behindOf = [];
       items.forEach(function (F, idx) {
         if (F.extra) return;
@@ -1592,7 +1615,7 @@ function renderMesh(ctx, prim) {
         var lo = Infinity, hi = -Infinity;
         F.q.pts.forEach(function (p) { var d = dot(P.nDom, p); lo = Math.min(lo, d); hi = Math.max(hi, d); });
         var allPos = lo >= -BSP_EPS, allNeg = hi <= BSP_EPS;
-        if (allPos && allNeg) { nearL.push(F); return; }
+        if (allPos && allNeg) { farL.push(F); return; }   /* in the plane itself: let the plane show on top */
         if (allPos || allNeg) { ((allPos ? 1 : -1) === nearSign ? nearL : farL).push(F); return; }
         var cut = splitPoly(F.q, P.nDom, 0), ls = splitSegs(F.q.lines, P.nDom, 0), es = splitSegs(F.q.edges, P.nDom, 0);
         [["front", 1], ["back", -1]].forEach(function (sd2) {
@@ -1683,7 +1706,7 @@ function hemisphereRegions(c) {
 function lineObject(ctx, a, b, cls) {
   var pa = projPt(ctx, a), pb = projPt(ctx, b);
   return {
-    kind: "line", cls: cls, pa: pa, pb: pb,
+    kind: "line", cls: cls, pa: pa, pb: pb, a: a, b: b,
     draw: function (svg) { el("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, "class": cls }, svg); }
   };
 }
