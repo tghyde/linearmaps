@@ -100,6 +100,24 @@ a { color: var(--accent); }
   cursor: pointer;
 }
 #themetoggle:hover { background: var(--code-bg); }
+#ctrlToggle {
+  position: fixed;
+  top: .5rem;
+  right: 3.2rem;
+  z-index: 60;
+  background: var(--card-bg);
+  color: var(--accent);
+  border: none;
+  padding: .3rem .6rem;
+  font-family: var(--font-ui);
+  font-size: .85rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#ctrlToggle:hover { background: var(--accent); color: var(--bg); }
+.controls[hidden] { display: none; }
 
 #courselink {
   position: fixed;
@@ -325,6 +343,7 @@ footer.doc {
 </head>
 <body>
 <a id="courselink" href="https://tghyde.github.io/math221-fall2026/" title="Back to the Math 221 course site">&larr; Math 221</a>
+<button id="ctrlToggle" title="Hide or show the matrix, example and display controls" aria-pressed="false">Hide controls</button>
 <button id="themetoggle" aria-label="Toggle light or dark theme" title="Toggle light/dark"></button>
 <div class="hero">
   <img src="banner.png" alt="">
@@ -588,6 +607,7 @@ var state = {
   show: { figure: true, circle: false, lattice: false, basis: false, grid: true, mirror: true },
   Wd: 5, Wc: 5,  /* half-widths of the domain and codomain windows */
   pan: { d: [0, 0], c: [0, 0] },   /* window centres of the 2D views */
+  hideControls: false,              /* quiz mode: only the pictures */
   cam: { yaw: -30 * DEG, phi: 25 * DEG }   /* shared orbit camera for 3D views */
 };
 var VEC_DEFAULT = { u: ["1", "0", "0"], v: ["0", "1", "0"], w: ["0", "0", "1"] };
@@ -2061,7 +2081,7 @@ function updateHash() {
             vec: [state.vec.u, state.vec.v, state.vec.w],
             s: [sh.figure, sh.circle, sh.lattice, sh.basis, sh.grid, sh.mirror].map(Number),
             w: [r3(state.Wd), r3(state.Wc)], cam: [r3(state.cam.yaw), r3(state.cam.phi)],
-            pan: [state.pan.d.map(r3), state.pan.c.map(r3)] };
+            pan: [state.pan.d.map(r3), state.pan.c.map(r3)], hc: state.hideControls ? 1 : 0 };
   try { history.replaceState(null, "", "#" + b64url(JSON.stringify(o))); } catch (e) {}
 }
 /* continuous interactions (drag, wheel) update the link a little later */
@@ -2106,6 +2126,7 @@ function loadHash() {
         if (Array.isArray(q) && q.length === 2 && isFinite(q[0]) && isFinite(q[1])) state.pan[k] = [Number(q[0]), Number(q[1])];
       });
     }
+    state.hideControls = o.hc === 1;
     if (Array.isArray(o.cam) && isFinite(o.cam[0]) && isFinite(o.cam[1])) {
       state.cam = { yaw: Number(o.cam[0]), phi: Math.max(-1.55, Math.min(1.55, Number(o.cam[1]))) };
     }
@@ -2131,6 +2152,14 @@ function init() {
   });
   if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { icon(); themeCols = null; drawAll(); });
   icon();
+
+  /* hide the control cards (for in-class questions from the pictures alone) */
+  function applyControls() {
+    document.querySelector(".controls").hidden = state.hideControls;
+    $("ctrlToggle").textContent = state.hideControls ? "Show controls" : "Hide controls";
+    $("ctrlToggle").setAttribute("aria-pressed", state.hideControls ? "true" : "false");
+  }
+  $("ctrlToggle").addEventListener("click", function () { state.hideControls = !state.hideControls; applyControls(); updateHash(); });
 
   /* dimensions */
   function dimChange() { setDims(Number($("selM").value), Number($("selN").value)); updateHash(); }
@@ -2190,6 +2219,7 @@ function init() {
   ["chkFigure", "chkCircle", "chkLattice", "chkBasis", "chkGrid", "chkMirror"].forEach(function (id, i) {
     $(id).checked = state.show[["figure", "circle", "lattice", "basis", "grid", "mirror"][i]];
   });
+  applyControls();
   if (loaded && loaded.mapped) doMap(); else drawAll();
 }
 document.addEventListener("DOMContentLoaded", init);

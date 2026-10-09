@@ -44,6 +44,9 @@ match [hwGenie](https://github.com/tghyde/hwgenie) course sites and the
   onto. Singular 2 × 2 maps collapse the lattice to a line.
 - The URL hash encodes the whole state (matrix, toggles, vectors, zoom),
   so **Copy link** reproduces a picture.
+- **Hide controls** (top right) removes the matrix, example and display
+  cards, leaving only the two pictures, for asking a class to reason from
+  the picture alone; the choice is part of the link.
 
 ## Implementation notes
 
